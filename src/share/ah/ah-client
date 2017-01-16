@@ -1,0 +1,81 @@
+
+[[ -z "$AH_REGION" || -z "$AH_BUCKET" || -z "$AH_APP" || -z "$AH_ENV" ]] \
+  && echo "missing environment configuration" 1>&2 && exit 1
+
+usage() {
+  local prog=$(basename ${BASH_SOURCE[0]})
+  exec 1>&2
+  [[ $1 ]] && echo "$prog: $1" && echo
+  cat <<EOT
+USAGE: $prog [-hc]
+       $prog TARGET ...
+
+Where TARGET arguments are make(1) targets in the ah(1) project Makefile.
+
+OPTIONS:
+  -h          Print this usage info and exit.
+  -c          Print environment configuration variables and exit.
+EOT
+  exit 1;
+}
+
+info() { echo -e "\033[1m$1\033[0m"; }
+warn() { echo -e "\033[33m$1\033[0m"; }
+
+appdir=/opt/$AH_APP
+
+while getopts hc o; do
+  case $o in
+    c) set |grep ^AH_ ; cat $appdir/.ah/ah.env 2>/dev/null ; exit 0 ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND-1))
+
+[[ -z "$1" ]] && usage
+
+info "Updating env version..."
+. <(aws s3 cp s3://$AH_BUCKET/data/$AH_APP/${AH_ENV}.sh -)
+
+appsrc=$(mktemp -d -p /opt ${AH_APP}.${AH_SHA}.XXX)
+appgit=s3://$AH_BUCKET/repo/$AH_APP
+apptgz=s3://$AH_BUCKET/repo/$AH_APP/${AH_SHA}.tar.gz
+apptgt=s3://$AH_BUCKET/data/$AH_APP/${AH_SHA}.tar.gz
+appenv=s3://$AH_BUCKET/data/$AH_APP/${AH_ENV}.env
+
+pushd $appsrc
+  info "Fetching repo..."
+  if ! (aws s3 cp $apptgz - |tar xzvf -); then
+    # bare repo was the old way that ah used to do it
+    warn "Falling back to bare repo in ah compatibility mode..."
+
+    gittmp=$(mktemp -d)
+    aws s3 cp --recursive $appgit $gittmp > /dev/null
+
+    info "Cloning from bare repo..."
+    git clone $gittmp .
+    git checkout $AH_SHA
+    rm -rf $gittmp
+  fi
+
+  info "Fetching target..."
+  mkdir target
+  aws s3 cp $apptgt - |(cd target && tar xzvf -)
+
+  info "Fetching env vars..."
+  mkdir .ah
+  aws s3 cp $appenv - 2>/dev/null > .ah/ah.env
+popd
+
+appdir_old=$(readlink -f $appdir)
+
+info "Linking $appsrc -> $appdir..."
+ln -sf $appsrc $appdir
+
+info "Running make..."
+make -C $appdir "$@"
+
+info "Cleaning up..."
+[[ -d $appdir_old ]] && rm -rf $appdir_old
+
+info "Done."

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+AH=$(basename ${BASH_SOURCE[0]})
+
+# Directories where ah configuration and library files are located.
+AH_BIN="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+AH_LIB="$( realpath "$AH_BIN/../lib/ah" )"
+AH_ETC="$( realpath "$AH_BIN/../etc/ah" )"
+AH_SHR="$( realpath "$AH_BIN/../share/ah" )"
+AH_CFG="${HOME}/.ah"
+
+export PATH="${AH_LIB}:$PATH"
+
+export my_pid=$$   # so subshells can kill this shell -- poor man's exceptions
+trap "exit 1" USR1 # signal so exceptions can change exit status on abort
+
+# Print an error message to stderr and exit with nonzero status.
+ah_die() {
+  [[ $# -gt 0 ]] && echo "$AH:" "$@" 1>&2
+  kill -s USR1 $my_pid
+  exit 1
+}
+
+# Load config file and export its vars.
+ah_load_conf() {
+  local vars=$(grep -s '^AH_[A-Z][A-Z]*=' $1 |cut -d= -f1)
+  [[ -n "$vars" ]] && . $1 && export $vars
+}
+
+[[ -n "$AH_BUCKET" ]] || ah_die "AH_BUCKET environment variable must be set"
+
+ah_load_conf .ah/ah.conf
+ah_load_conf .ah/env
+
+# Bootstrapping ###############################################################
+
+if [[ $# -gt 0 ]]; then
+  AH_CMD="$1"
+  AH_DOIT=$AH_LIB/ah-${1}
+  shift 1
+
+  if [[ ! -e $AH_DOIT ]]; then
+    ah_die "no such command: $AH_CMD"
+  fi
+
+  . $AH_LIB/.fns
+  . $AH_DOIT
+else
+  ls -1 $AH_LIB |grep ^ah- |sed s/^...//
+fi

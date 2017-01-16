@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+AH_ORG=$1
+[[ -z "$AH_ORG" ]] && ah_die "Usage: $AH getorg <org>"
+
+aws s3 cp s3://$AH_BUCKET/etc/${AH_ORG}.conf -

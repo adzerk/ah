@@ -1,0 +1,12 @@
+# vim: set ft=sh:
+
+[[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
+
+if [[ -z "$1" ]]; then
+  [[ -n "$AH_ENV" ]] && echo "$AH_ENV"
+  exit 0
+fi
+
+export AH_ENV=$1
+vars=$(set |grep -E '^AH_ENV=')
+echo "$vars" > .ah/env

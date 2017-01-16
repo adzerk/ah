@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+[[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
+
+prefix=repo/${AH_APP}/
+
+aws s3api list-objects-v2 --bucket $AH_BUCKET --prefix $prefix \
+  |jt Contents [ Key % ] [ LastModified % ] \
+  |sed "s@^${prefix}@@" \
+  |grep '\.tar\.gz' \
+  |sed 's@\.tar\.gz@@' \
+  |sort -k2

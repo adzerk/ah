@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+[[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
+
+hash=$(git rev-parse HEAD)
+
+echo -n "Uploading target dir..."
+mkdir -p target
+(cd target && tar czf - .) | aws s3 cp - s3://$(ah_data $AH_APP)/${hash}.tar.gz
+echo done.
+
+echo -n "Pushing repo..."
+git archive --format tar $hash |aws s3 cp - s3://$(ah_repo $AH_APP)/${hash}.tar.gz
+echo done.

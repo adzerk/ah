@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+AH_ORG=$1
+
+[[ -n "$AH_ORG" ]] || ah_die "Usage: $AH putorg <org> [<template>]"
+
+echo -n "Deleting ${AH_ORG}..."
+aws s3 rm s3://$AH_BUCKET/etc/${AH_ORG}.conf > /dev/null
+echo done.

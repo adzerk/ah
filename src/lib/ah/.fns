@@ -1,0 +1,174 @@
+#!/bin/bash
+
+## helpers
+###############################################################################
+
+# Returns the S3 location of the git repo for this app.
+ah_repo() {
+  echo $AH_BUCKET/repo/$1
+}
+
+# Returns the S3 location of the data folder for this app.
+ah_data() {
+  echo $AH_BUCKET/data/$1
+}
+
+ah_bin() {
+  echo $AH_BUCKET/bin
+}
+
+# Returns the ARN of the specified S3 location.
+ah_s3_arn() {
+  echo arn:aws:s3:::$1
+}
+
+# Returns the ARN of the specified policy name.
+ah_policy_arn() {
+  echo arn:aws:iam::$(ah_account_id):policy/$1
+}
+
+ah_s3_ls() {
+  local prefix=$(echo "$1" |sed 's@//*$@@')
+  aws s3api list-objects --bucket $AH_BUCKET --prefix "$prefix" \
+    |jt Contents Key % |sed "s@^${prefix}/@@"
+}
+
+# Returns the ARN of the specified instance profile name.
+ah_instance_profile_arn() {
+  echo arn:aws:iam::$(ah_account_id):instance-profile/$1
+}
+
+ah_not() {
+  if "$@"; then
+    return 1
+  else
+    return 0
+  fi
+}
+
+ah_check() {
+  local what=$1
+  local abort=no
+  shift
+  echo -n "Checking ${what}..."
+  if "$@" > /dev/null 2>&1; then
+    echo "[PASS]"
+  else
+    echo "[FAIL]"
+    abort=yes
+  fi
+
+  if [[ $abort == yes ]]; then
+    return 1
+  fi
+}
+
+ah_git_hash() {
+  git show-ref --hash $(git symbolic-ref HEAD)
+}
+
+## account info
+###############################################################################
+
+# Returns the AWS account ID associated this user.
+ah_account_id() {
+  aws iam get-user |jt User Arn % |awk -F: '{print $5}'
+}
+
+# Returns the first alias for the AWS account associated with this user.
+ah_account_alias() {
+  aws iam list-account-aliases |jt AccountAliases % |head -1
+}
+
+## policies
+###############################################################################
+
+ah_policy_exists() {
+  aws iam list-policies --no-paginate \
+    |jt Policies [ PolicyName % ] \
+    |grep -q "^${AH_APP}\$"
+}
+
+## security groups
+###############################################################################
+
+ah_sg_exists() {
+  local name=$1
+  aws ec2 describe-security-groups --no-paginate --group-names $name \
+    |jt SecurityGroups [ GroupName % ] \
+    |grep -q "^${name}\$"
+}
+
+## roles
+###############################################################################
+
+ah_role_exists() {
+  local name=$1
+  aws iam list-roles --no-paginate \
+    |jt Roles [ RoleName % ] \
+    |grep -q "^${name}\$"
+}
+
+ah_create_role() {
+  local name=$1
+
+}
+
+ah_role_policy_arns() {
+  local name=$1
+  aws iam list-attached-role-policies --role-name $name \
+    |jt AttachedPolicies [ PolicyArn % ]
+}
+
+ah_detach_all_role_policies() {
+  local name=$1
+  local i
+  for i in $(ah_role_policy_arns $name); do
+    aws iam detach-role-policy \
+      --role-name $name --policy-arn $i > /dev/null
+  done
+}
+
+## instance profiles
+###############################################################################
+
+ah_instance_profile_exists() {
+  local name=$1
+  aws iam list-instance-profiles \
+    |jt InstanceProfiles [ InstanceProfileName % ] \
+    |grep -q "^${name}\$"
+}
+
+## launch configurations
+###############################################################################
+
+ah_launch_config_exists() {
+  local name=$1
+  aws autoscaling describe-launch-configurations \
+    --launch-configuration-names $name \
+    |jt LaunchConfigurations [ LaunchConfigurationName % ] \
+    |grep -q "^${name}\$"
+}
+
+## autoscaling groups
+###############################################################################
+
+ah_asg_exists() {
+  local name=$1
+  aws autoscaling describe-auto-scaling-groups \
+    --auto-scaling-group-names $name \
+    |jt AutoScalingGroups [ AutoScalingGroupName % ] \
+    |grep -q "^${name}\$"
+}
+
+## cross-platform utility fns
+###############################################################################
+
+ah_mktemp() {
+  case $(uname -s) in
+    Darwin) mktemp -t temp ;;
+    Linux) mktemp ;;
+    *) (>&2 echo "Unknown system '$(uname -s)', don't now how to ah_mktemp");
+       exit 1 ;;
+  esac
+}

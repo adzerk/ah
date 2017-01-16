@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+AH_ORG=$1
+
+[[ -n "$AH_ORG" ]] || ah_die "Usage: $AH putorg <org> [<template>]"
+[[ $(echo "$AH_ORG" |wc -w) -gt 1 ]] && ah_die "org name must not contain spaces"
+
+if ! [[ -t 0 ]]; then
+  vars=$(cat)
+else
+  PS3="Org to use as a template? "
+  select template in $(ah_s3_ls etc |sed 's@\.conf$@@'); do
+    if [[ -n "$template" ]]; then
+      . <(aws s3 cp s3://$AH_BUCKET/etc/${template}.conf - |grep . |sed 's@^@export @')
+      break
+    fi
+  done
+
+  while true; do
+    dfl="$AH_REGION"
+    read -p "AWS Region? [${AH_REGION:-$dfl}] " AH_REGION
+    export AH_REGION="${AH_REGION:=$dfl}"
+
+    dfl="$AH_DEFAULT_SGS"
+    read -p "SGs for default ingress rules (all access)? [${AH_DEFAULT_SGS:-$dfl}] " AH_DEFAULT_SGS
+    export AH_DEFAULT_SGS="${AH_DEFAULT_SGS:=$dfl}"
+
+    dfl="$AH_AZS"
+    read -p "Availability zones in which to launch instances? [${AH_AZS:-$dfl}] " AH_AZS
+    export AH_AZS="${AH_AZS:=$dfl}"
+
+    vars=$(set |grep -E '^AH_(REGION|DEFAULT_SGS|AZS)=')
+
+    echo
+    echo "$vars"
+    echo
+
+    read -sn 1 -p "Approve? [yN] " approve
+    [[ "$approve" == "y" ]] && echo && break;
+
+    echo
+    echo "Okay, starting over (ctrl-c to abort)."
+    echo
+  done
+
+  echo
+fi
+
+echo -n "Saving org settings..."
+echo "$vars" |aws s3 cp - s3://$AH_BUCKET/etc/${AH_ORG}.conf
+echo done.

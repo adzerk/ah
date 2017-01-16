@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+if ! [[ -t 0 ]]; then
+  vars=$(cat)
+else
+  while true; do
+    dfl=$(basename "$PWD")
+    read -p "App name? [${AH_APP:-$dfl}] " AH_APP
+    export AH_APP="${AH_APP:=$dfl}"
+
+    dfl="$AH_BILLING_GROUP"
+    read -p "Billing group? [${AH_BILLING_GROUP:-$dfl}] " AH_BILLING_GROUP
+    export AH_BILLING_GROUP="${AH_BILLING_GROUP:=$dfl}"
+
+    dfl="$AH_BILLING_PROJECT"
+    read -p "Billing project? [${AH_BILLING_PROJECT:-$dfl}] " AH_BILLING_PROJECT
+    export AH_BILLING_PROJECT="${AH_BILLING_PROJECT:=$dfl}"
+
+    vars=$(set |grep -E '^AH_(APP|BILLING_GROUP|BILLING_PROJECT)=')
+
+    echo
+    echo "$vars"
+    echo
+
+    read -sn 1 -p "Approve? [yN] " approve
+    [[ "$approve" == "y" ]] && echo && break;
+
+    echo
+    echo "Okay, starting over (ctrl-c to abort)."
+    echo
+  done
+fi
+
+echo
+mkdir -p .ah || ah_die "can't create .ah directory"
+echo -n "Writing .ah/ah.conf file..."
+echo "$vars" > .ah/ah.conf
+echo done.
+
+ah_check "policy does not already exist" ah_not ah_policy_exists || exit 0
+
+S3_READONLY=$(cat <<EOT
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject"
+      ],
+      "Resource": [
+        "$(ah_s3_arn $(ah_bin))/*",
+        "$(ah_s3_arn $(ah_repo $AH_APP))/*",
+        "$(ah_s3_arn $(ah_data $AH_APP))/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "$(ah_s3_arn $AH_BUCKET)"
+      ]
+    }
+  ]
+}
+EOT
+)
+
+echo -n "Creating S3 access policy..."
+aws iam create-policy \
+  --path /ah/ \
+  --policy-name $AH_APP \
+  --description "Ah instance access to S3 bucket." \
+  --policy-document "$S3_READONLY" \
+  > /dev/null
+echo done.

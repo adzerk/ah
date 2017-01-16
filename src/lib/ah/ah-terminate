@@ -1,0 +1,61 @@
+# vim: set ft=sh:
+
+[[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
+[[ -z "$AH_ENV" ]] && ah_die "no environment set: do '$AH env <env>'"
+
+read -sn 1 -p "Really terminate environment '$AH_ENV'? [yN] " approve
+echo
+[[ "$approve" == "y" ]] || exit 0
+
+if ah_check "autoscaling group exists" ah_asg_exists $AH_ENV; then
+  echo -n "Deleting autoscaling group..."
+  aws autoscaling delete-auto-scaling-group \
+    --auto-scaling-group-name $AH_ENV --force-delete \
+    > /dev/null
+  echo "done."
+  while ah_not ah_check "autoscaling group deleted" ah_not ah_asg_exists $AH_ENV; do
+    sleep 5
+  done
+fi
+
+if ah_check "launch configuration exists" ah_launch_config_exists $AH_ENV; then
+  echo -n "Deleting launch configuration..."
+  aws autoscaling delete-launch-configuration \
+    --launch-configuration-name $AH_ENV \
+    > /dev/null
+  echo "done."
+fi
+
+if ah_check "SG exists" ah_sg_exists $AH_ENV; then
+  echo -n "Deleting SG..."
+  aws ec2 delete-security-group \
+    --group-name $AH_ENV \
+    > /dev/null \
+    || ah_die "can't delete SG."
+  echo "done."
+fi
+
+if ah_check "instance profile exists" ah_instance_profile_exists $AH_ENV; then
+  echo -n "Removing role..."
+  aws iam remove-role-from-instance-profile \
+    --role-name $AH_ENV \
+    --instance-profile-name $AH_ENV \
+    > /dev/null
+  echo "done."
+
+  echo -n "Deleting instance profile..."
+  aws iam delete-instance-profile \
+    --instance-profile-name $AH_ENV \
+    > /dev/null
+  echo "done."
+fi
+
+if ah_check "role exists" ah_role_exists $AH_ENV; then
+  echo -n "Detaching role policies..."
+  ah_detach_all_role_policies $AH_ENV
+  echo "done."
+
+  echo -n "Deleting role..."
+  aws iam delete-role --role-name $AH_ENV > /dev/null
+  echo "done."
+fi
