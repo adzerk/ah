@@ -38,6 +38,14 @@ Deletes the org named \fIorg\fR\.
 \fBupgrade\fR
 Update static \fBah\fR bootstrapping files on S3\. Needed when \fBah\fR itself is updated to a new version\.
 .
+.TP
+\fBputsecret\fR \fIsecret\fR
+Create or update the S3 secret file for the variable \fIsecret\fR\. The value is read from \fIstdin\fR\. \fBNOTE:\fR the value must be explicitly quoted if it contains spaces, newlines, etc\.
+.
+.TP
+\fBlsgrant\fR \fIsecret\fR
+Print a list of \fBah\fR environments that have been granted access to the S3 secret file for the variable \fIsecret\fR\.
+.
 .SS "Application Commands"
 These commands operate at the application level and must be executed from an application git directory\. The \fBinit\fR command must be executed to initialize the application before any other application or environment scope commands are attempted\.
 .
@@ -91,6 +99,18 @@ Interactive command to create AWS resources for a new environment\.
 .TP
 \fBterminate\fR
 Destroy all AWS resources associated with the current environment\. Only resources managed by \fBah\fR will be affected\.
+.
+.TP
+\fBsecrets\fR [\fB\-a\fR]
+Print all S3 secrets to which the current environment has access, or if the \fB\-a\fR option is specified print all secrets to which the current user has access\. See \fBFILES\fR below for a description of the output format\.
+.
+.TP
+\fBgrant\fR \fIsecret\fR
+Grant permission for the current environment\'s instances to access the S3 secret file for the variable \fIsecret\fR\.
+.
+.TP
+\fBrevoke\fR \fIsecret\fR
+Revoke permission for the current environment\'s instances to access the S3 secret file for the variable \fIsecret\fR\.
 .
 .SH "ENVIRONMENT"
 The following environment variables must be set before using \fBah\fR:

@@ -105,6 +105,11 @@ provided. Input may be provided interactively from the terminal or via
 <dt><code>rmorg</code> <var>org</var></dt><dd><p>Deletes the org named <var>org</var>.</p></dd>
 <dt class="flush"><code>upgrade</code></dt><dd><p>Update static <code>ah</code> bootstrapping files on S3. Needed when <code>ah</code> itself is
 updated to a new version.</p></dd>
+<dt><code>putsecret</code> <var>secret</var></dt><dd><p>Create or update the S3 secret file for the variable <var>secret</var>. The value is
+read from <var>stdin</var>. <strong>NOTE:</strong> the value must be explicitly quoted if it
+contains spaces, newlines, etc.</p></dd>
+<dt><code>lsgrant</code> <var>secret</var></dt><dd><p>Print a list of <strong>ah</strong> environments that have been granted access to the
+S3 secret file for the variable <var>secret</var>.</p></dd>
 </dl>
 
 
@@ -147,6 +152,13 @@ provided, otherwise use the SHA of <code>HEAD</code>.</p></dd>
 <dt class="flush"><code>launch</code></dt><dd><p>Interactive command to create AWS resources for a new environment.</p></dd>
 <dt><code>terminate</code></dt><dd><p>Destroy all AWS resources associated with the current environment. Only
 resources managed by <code>ah</code> will be affected.</p></dd>
+<dt><code>secrets</code> [<code>-a</code>]</dt><dd><p>Print all S3 secrets to which the current environment has access, or if
+the <code>-a</code> option is specified print all secrets to which the current user
+has access. See <strong>FILES</strong> below for a description of the output format.</p></dd>
+<dt><code>grant</code> <var>secret</var></dt><dd><p>Grant permission for the current environment's instances to access the S3
+secret file for the variable <var>secret</var>.</p></dd>
+<dt><code>revoke</code> <var>secret</var></dt><dd><p>Revoke permission for the current environment's instances to access the S3
+secret file for the variable <var>secret</var>.</p></dd>
 </dl>
 
 
