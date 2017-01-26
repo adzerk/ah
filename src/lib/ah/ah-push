@@ -3,12 +3,14 @@
 [[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
 
 hash=$(git rev-parse HEAD)
+tmp1=$(mktemp)
+tmp2=$(mktemp)
 
-echo -n "Uploading target dir..."
-mkdir -p target
-(cd target && tar czf - .) | aws s3 cp - s3://$(ah_data $AH_APP)/${hash}.tar.gz
-echo done.
+trap "rm -f $tmp1 $tmp2" EXIT
 
 echo -n "Pushing repo..."
-git archive --format tar $hash |gzip -9 |aws s3 cp - s3://$(ah_repo $AH_APP)/${hash}.tar.gz
+git archive --format tar $hash > $tmp1
+tar cf $tmp2 target
+tar Af $tmp1 $tmp2
+cat $tmp1 |gzip -9 |aws s3 cp - s3://$(ah_repo $AH_APP)/${hash}.tar.gz
 echo done.

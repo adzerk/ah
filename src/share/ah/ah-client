@@ -56,11 +56,11 @@ pushd $appsrc
     git clone $gittmp .
     git checkout $AH_SHA
     rm -rf $gittmp
-  fi
 
-  info "Fetching target..."
-  mkdir target
-  aws s3 cp $apptgt - |(cd target && tar xzvf -)
+    info "Fetching target..."
+    mkdir target
+    aws s3 cp $apptgt - |(cd target && tar xzvf -)
+  fi
 
   info "Fetching env vars..."
   mkdir .ah
