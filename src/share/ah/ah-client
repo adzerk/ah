@@ -19,8 +19,8 @@ EOT
   exit 1;
 }
 
-info() { echo -e "\033[1m$1\033[0m"; }
-warn() { echo -e "\033[33m$1\033[0m"; }
+info() { echo -e "\033[1m$1\033[0m" 1>&2; }
+warn() { echo -e "\033[33m$1\033[0m" 1>&2; }
 
 appdir=/opt/$AH_APP
 
@@ -56,11 +56,11 @@ pushd $appsrc
     git clone $gittmp .
     git checkout $AH_SHA
     rm -rf $gittmp
-  fi
 
-  info "Fetching target..."
-  mkdir target
-  aws s3 cp $apptgt - |(cd target && tar xzvf -)
+    info "Fetching target..."
+    mkdir target
+    aws s3 cp $apptgt - |(cd target && tar xzvf -)
+  fi
 
   info "Fetching env vars..."
   mkdir .ah
