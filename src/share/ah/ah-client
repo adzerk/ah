@@ -19,6 +19,7 @@ Where TARGET arguments are make(1) targets in the ah(1) project Makefile.
 OPTIONS:
   -h          Print this usage info and exit.
   -c          Print environment configuration variables and exit.
+  -u          Update environment configuration variables and exit.
 EOT
   exit 1;
 }
