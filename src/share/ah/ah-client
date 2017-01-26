@@ -67,15 +67,15 @@ pushd $appsrc
   aws s3 cp $appenv - 2>/dev/null > .ah/ah.env
 popd
 
-appdir_old=$(readlink -f $appdir)
+appdir_old=$(readlink -e $appdir)
 
 info "Linking $appsrc -> $appdir..."
-ln -sf $appsrc $appdir
+ln -sfn $appsrc $appdir
 
 info "Running make..."
 make -C $appdir "$@"
 
 info "Cleaning up..."
-[[ -d $appdir_old ]] && rm -rf $appdir_old
+[[ -d "$appdir_old" ]] && rm -rf $appdir_old
 
 info "Done."

@@ -37,7 +37,7 @@ export AH_APP=$AH_APP
 export AH_ENV=$AH_ENV
 
 EOT
-  aws s3 cp s3://$AH_BUCKET/bin/ah-client - >> ah-client
+  aws s3 cp s3://$AH_BUCKET/bin/ah-client2 - >> ah-client
   chmod 755 ah-client
 popd
 
