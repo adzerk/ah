@@ -5,7 +5,6 @@ AH=$(basename ${BASH_SOURCE[0]})
 # Directories where ah configuration and library files are located.
 AH_BIN="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 AH_LIB="$( realpath "$AH_BIN/../lib/ah" )"
-AH_ETC="$( realpath "$AH_BIN/../etc/ah" )"
 AH_SHR="$( realpath "$AH_BIN/../share/ah" )"
 AH_CFG="${HOME}/.ah"
 
