@@ -8,12 +8,13 @@ AH_ORG=$1
 if ! [[ -t 0 ]]; then
   vars=$(cat)
 else
-  PS3="Org to use as a template? "
-  select template in $(ah_s3_ls etc |sed 's@\.conf$@@'); do
-    if [[ -n "$template" ]]; then
-      . <(aws s3 cp s3://$AH_BUCKET/etc/${template}.conf - |grep . |sed 's@^@export @')
-      break
-    fi
+  PS3="Use existing Org as a template?"
+  select template in "NO TEMPLATE" $(ah_s3_ls etc |sed 's@\.conf$@@'); do
+    case "$template" in
+      "NO TEMPLATE") break ;;
+      *) . <(aws s3 cp s3://$AH_BUCKET/etc/${template}.conf - |grep . |sed 's@^@export @')
+        ;;
+    esac
   done
 
   while true; do
