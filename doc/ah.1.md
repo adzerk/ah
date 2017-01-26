@@ -37,6 +37,19 @@ any directory.
     Update static `ah` bootstrapping files on S3. Needed when `ah` itself is
     updated to a new version.
 
+  * `getsecrets`:
+    Print all S3 secrets to which the user has access. See **FILES** below for
+    a description of the output format.
+
+  * `putsecret` <secret>:
+    Create or update the S3 secret file for the variable <secret>. The value is
+    read from <stdin>. **NOTE:** the value must be explicitly quoted if it
+    contains spaces, newlines, etc.
+
+  * `lsgrant` <secret>:
+    Print a list of **ah** environments that have been granted access to the
+    S3 secret file for the variable <secret>.
+
 ### Application Commands
 
 These commands operate at the application level and must be executed from an
@@ -94,6 +107,18 @@ environment before any other environment scope commands are attempted.
   * `terminate`:
     Destroy all AWS resources associated with the current environment. Only
     resources managed by `ah` will be affected.
+
+  * `lssecret`:
+    Print the list of S3 secret variables to which the current environment has
+    been granted access.
+
+  * `grant` <secret>:
+    Grant permission for the current environment's instances to access the S3
+    secret file for the variable <secret>.
+
+  * `revoke` <secret>:
+    Revoke permission for the current environment's instances to access the S3
+    secret file for the variable <secret>.
 
 ## ENVIRONMENT
 
