@@ -10,5 +10,5 @@ mkdir -p target
 echo done.
 
 echo -n "Pushing repo..."
-git archive --format tar $hash |aws s3 cp - s3://$(ah_repo $AH_APP)/${hash}.tar.gz
+git archive --format tar $hash |gzip -9 |aws s3 cp - s3://$(ah_repo $AH_APP)/${hash}.tar.gz
 echo done.
