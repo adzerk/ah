@@ -71,7 +71,7 @@ pushd $appsrc
       echo "${key##*/}=$val" ; \
     done > .ah/ah.env
   aws s3 cp $appenv - 2>/dev/null >> .ah/ah.env
-popd
+popd > /dev/null
 
 appdir_old=$(readlink -e $appdir)
 
