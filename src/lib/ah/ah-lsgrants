@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-[[ -z "$AH_ENV" ]] && ah_die "environment not configured: do '$AH env <name>'"
-
 [[ $# -gt 0 ]] || ah_die "secret variable name required"
 
 aws iam list-policies \
