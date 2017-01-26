@@ -19,7 +19,7 @@ Commands are organized by scope: global, application, and environment\.
 These commands are not specific to any application\. They may be executed from any directory\.
 .
 .TP
-\fBlsorg\fR
+\fBorgs\fR
 Print a listing of existing org names\.
 .
 .TP
@@ -43,7 +43,7 @@ Update static \fBah\fR bootstrapping files on S3\. Needed when \fBah\fR itself i
 Create or update the S3 secret file for the variable \fIsecret\fR\. The value is read from \fIstdin\fR\. \fBNOTE:\fR the value must be explicitly quoted if it contains spaces, newlines, etc\.
 .
 .TP
-\fBlsgrant\fR \fIsecret\fR
+\fBgrants\fR \fIsecret\fR
 Print a list of \fBah\fR environments that have been granted access to the S3 secret file for the variable \fIsecret\fR\.
 .
 .SS "Application Commands"
@@ -62,7 +62,7 @@ Push the \fBHEAD\fR of the current application git repo and the contents of the 
 Print the list of SHAs that have been uploaded via the \fBpush\fR command for the current application\.
 .
 .TP
-\fBlsenv\fR
+\fBenvs\fR
 Print the list of environments associated with the current application\.
 .
 .TP

@@ -19,7 +19,7 @@ Commands are organized by scope: global, application, and environment.
 These commands are not specific to any application. They may be executed from
 any directory.
 
-  * `lsorg`:
+  * `orgs`:
     Print a listing of existing org names.
 
   * `getorg` <org>:
@@ -42,7 +42,7 @@ any directory.
     read from <stdin>. **NOTE:** the value must be explicitly quoted if it
     contains spaces, newlines, etc.
 
-  * `lsgrant` <secret>:
+  * `grants` <secret>:
     Print a list of **ah** environments that have been granted access to the
     S3 secret file for the variable <secret>.
 
@@ -66,7 +66,7 @@ are attempted.
     Print the list of SHAs that have been uploaded via the `push` command for
     the current application.
 
-  * `lsenv`:
+  * `envs`:
     Print the list of environments associated with the current application.
 
   * `status`:
