@@ -75,7 +75,7 @@ You will be asked a number of questions:
 It's okay if you leave things blank or make a mistake, you can fix it later or
 override the org settings when you create applications and environments.
 
-> You can use `ah getorg default` to download the org settings, or `ah lsorg`
+> You can use `ah getorg default` to download the org settings, or `ah orgs`
 > to see a list of org names.
 
 ### Create an Application
