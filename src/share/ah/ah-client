@@ -64,7 +64,13 @@ pushd $appsrc
 
   info "Fetching env vars..."
   mkdir .ah
-  aws s3 cp $appenv - 2>/dev/null > .ah/ah.env
+  aws s3 ls s3://$AH_BUCKET/secrets/ \
+    |awk '{print $NF}' \
+    | while read key; do
+      val=$(aws s3 cp s3://$AH_BUCKET/secrets/$key - 2>/dev/null) || continue ; \
+      echo "${key##*/}=$val" ; \
+    done > .ah/ah.env
+  aws s3 cp $appenv - 2>/dev/null >> .ah/ah.env
 popd
 
 appdir_old=$(readlink -e $appdir)

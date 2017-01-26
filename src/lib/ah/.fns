@@ -8,6 +8,11 @@ ah_repo() {
   echo $AH_BUCKET/repo/$1
 }
 
+# Returns the S3 location of the secrets for this app.
+ah_secret() {
+  echo $AH_BUCKET/secrets/$1
+}
+
 # Returns the S3 location of the data folder for this app.
 ah_data() {
   echo $AH_BUCKET/data/$1
@@ -84,9 +89,10 @@ ah_account_alias() {
 ###############################################################################
 
 ah_policy_exists() {
+  local name=${1:-$AH_APP}
   aws iam list-policies --no-paginate \
     |jt Policies [ PolicyName % ] \
-    |grep -q "^${AH_APP}\$"
+    |grep -q "^${name}\$"
 }
 
 ## security groups
@@ -123,9 +129,17 @@ ah_role_policy_arns() {
 ah_detach_all_role_policies() {
   local name=$1
   local i
+  local policies=$(aws iam list-policies \
+    |jt Policies [ Arn % ] [ Path % ])
   for i in $(ah_role_policy_arns $name); do
     aws iam detach-role-policy \
       --role-name $name --policy-arn $i > /dev/null
+    cat "$policies" \
+      |awk '$2 == "/ah/secrets/" {print $1}' \
+      |grep "^$i\\s" \
+      |while read a; do \
+        echo aws delete-policy --policy-arn $i; \
+      done
   done
 }
 
