@@ -40,11 +40,11 @@ Update static \fBah\fR bootstrapping files on S3\. Needed when \fBah\fR itself i
 .
 .TP
 \fBputsecret\fR \fIsecret\fR
-Create or update the S3 secret file for the variable \fIsecret\fR\. The value is read from \fIstdin\fR\. \fBNOTE:\fR the value must be explicitly quoted if it contains spaces, newlines, etc\.
+Create or update the S3 secret file for the variable \fIsecret\fR\. The value is read from \fIstdin\fR\. \fBNOTE: the value must be explicitly quoted if it contains spaces, newlines, etc\.\fR
 .
 .TP
-\fBgrants\fR \fIsecret\fR
-Print a list of \fBah\fR environments that have been granted access to the S3 secret file for the variable \fIsecret\fR\.
+\fBgrants\fR
+Print the table of S3 secret variable and \fBah\fR environment names for all environments that have been granted access to S3 secret variable files\.
 .
 .SS "Application Commands"
 These commands operate at the application level and must be executed from an application git directory\. The \fBinit\fR command must be executed to initialize the application before any other application or environment scope commands are attempted\.
@@ -62,8 +62,8 @@ Push the \fBHEAD\fR of the current application git repo and the contents of the 
 Print the list of SHAs that have been uploaded via the \fBpush\fR command for the current application\.
 .
 .TP
-\fBenvs\fR
-Print the list of environments associated with the current application\.
+\fBenvs\fR [\fB\-a\fR]
+Print the list of environments associated with the current application\. If the \fB\-a\fR option is provided print the table of \fBah\fR application and environment names for all environments\.
 .
 .TP
 \fBstatus\fR

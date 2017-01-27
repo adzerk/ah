@@ -39,12 +39,12 @@ any directory.
 
   * `putsecret` <secret>:
     Create or update the S3 secret file for the variable <secret>. The value is
-    read from <stdin>. **NOTE:** the value must be explicitly quoted if it
-    contains spaces, newlines, etc.
+    read from <stdin>. **NOTE: the value must be explicitly quoted if it
+    contains spaces, newlines, etc.**
 
-  * `grants` <secret>:
-    Print a list of **ah** environments that have been granted access to the
-    S3 secret file for the variable <secret>.
+  * `grants`:
+    Print the table of S3 secret variable and **ah** environment names for all
+    environments that have been granted access to S3 secret variable files.
 
 ### Application Commands
 
@@ -66,8 +66,10 @@ are attempted.
     Print the list of SHAs that have been uploaded via the `push` command for
     the current application.
 
-  * `envs`:
-    Print the list of environments associated with the current application.
+  * `envs` [`-a`]:
+    Print the list of environments associated with the current application. If
+    the `-a` option is provided print the table of **ah** application and
+    environment names for all environments.
 
   * `status`:
     Print status info for instances associated with this application.

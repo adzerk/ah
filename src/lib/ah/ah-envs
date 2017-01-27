@@ -1,5 +1,22 @@
 # vim: set ft=sh:
 
+all_envs() {
+  aws autoscaling describe-auto-scaling-groups \
+    |jt AutoScalingGroups \
+      [ Tags [ Key % ] [ Value % ] ] \
+      [ Tags [ Key % ] [ Value % ] ] \
+    |awk -F '	' '$1 == "AhApplication" && $3 == "AhEnvironment" {print $2 "\t" $4}' \
+    |sort
+}
+
+while getopts a o; do
+  case $o in
+    a) all_envs ; exit 0 ;;
+    *) ah_die "usage: $AH envs [-a]" ;;
+  esac
+done
+shift $((OPTIND-1))
+
 [[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
 
 aws autoscaling describe-auto-scaling-groups \

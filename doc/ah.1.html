@@ -106,10 +106,10 @@ provided. Input may be provided interactively from the terminal or via
 <dt class="flush"><code>upgrade</code></dt><dd><p>Update static <code>ah</code> bootstrapping files on S3. Needed when <code>ah</code> itself is
 updated to a new version.</p></dd>
 <dt><code>putsecret</code> <var>secret</var></dt><dd><p>Create or update the S3 secret file for the variable <var>secret</var>. The value is
-read from <var>stdin</var>. <strong>NOTE:</strong> the value must be explicitly quoted if it
-contains spaces, newlines, etc.</p></dd>
-<dt><code>grants</code> <var>secret</var></dt><dd><p>Print a list of <strong>ah</strong> environments that have been granted access to the
-S3 secret file for the variable <var>secret</var>.</p></dd>
+read from <var>stdin</var>. <strong>NOTE: the value must be explicitly quoted if it
+contains spaces, newlines, etc.</strong></p></dd>
+<dt class="flush"><code>grants</code></dt><dd><p>Print the table of S3 secret variable and <strong>ah</strong> environment names for all
+environments that have been granted access to S3 secret variable files.</p></dd>
 </dl>
 
 
@@ -128,7 +128,9 @@ below for a description of the expected format.</p></dd>
 the target directory to S3.</p></dd>
 <dt class="flush"><code>shas</code></dt><dd><p>Print the list of SHAs that have been uploaded via the <code>push</code> command for
 the current application.</p></dd>
-<dt class="flush"><code>envs</code></dt><dd><p>Print the list of environments associated with the current application.</p></dd>
+<dt><code>envs</code> [<code>-a</code>]</dt><dd><p>Print the list of environments associated with the current application. If
+the <code>-a</code> option is provided print the table of <strong>ah</strong> application and
+environment names for all environments.</p></dd>
 <dt class="flush"><code>status</code></dt><dd><p>Print status info for instances associated with this application.</p></dd>
 </dl>
 
