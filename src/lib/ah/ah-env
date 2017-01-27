@@ -1,7 +1,5 @@
 # vim: set ft=sh:
 
-[[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
-
 if [[ -z "$1" ]]; then
   [[ -n "$AH_ENV" ]] && echo "$AH_ENV"
   exit 0
