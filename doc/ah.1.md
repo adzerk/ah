@@ -62,7 +62,7 @@ are attempted.
     Push the `HEAD` of the current application git repo and the contents of
     the target directory to S3.
 
-  * `log`:
+  * `shas`:
     Print the list of SHAs that have been uploaded via the `push` command for
     the current application.
 

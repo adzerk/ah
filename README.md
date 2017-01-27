@@ -174,7 +174,7 @@ ah push
 This will upload a tarball of `HEAD` &mdash; you can configure `ah` ASGs to
 deploy this SHA to instances later.
 
-> **Note:** you can use `ah log` to see which commits have been pushed to S3.
+> **Note:** you can use `ah shas` to see which commits have been pushed to S3.
 
 ### Create an Environment
 
