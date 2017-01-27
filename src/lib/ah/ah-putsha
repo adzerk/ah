@@ -1,10 +1,9 @@
 # vim: set ft=sh:
 
-[[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
 [[ -z "$AH_ENV" ]] && ah_die "no environment set: do '$AH env <env>'"
 
 if [[ -n "$1" ]]; then
-  sha=$1
+  sha=$(git rev-parse "$1")
 else
   sha=$(git rev-parse HEAD)
 fi

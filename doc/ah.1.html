@@ -148,8 +148,9 @@ current environment name.</p></dd>
 <var>stdin</var>. See <strong>FILES</strong> below for a description of the expected format.</p></dd>
 <dt class="flush"><code>getvar</code></dt><dd><p>Print the application config variables stored for the current environment
 by the last <code>putvar</code>.</p></dd>
-<dt><code>putsha</code> [<var>sha</var>]</dt><dd><p>Set the configured deploy SHA for the current environment to <var>sha</var> if
-provided, otherwise use the SHA of <code>HEAD</code>.</p></dd>
+<dt><code>putsha</code> [<var>rev</var>]</dt><dd><p>Set the configured deploy SHA for the current environment to the SHA
+associated with git revision <var>rev</var> (or <code>HEAD</code> if not provided). See the
+<code>SPECIFYING REVISIONS</code> section of the <code>git-rev-parse</code>(1) manual for details.</p></dd>
 <dt class="flush"><code>getsha</code></dt><dd><p>Print the currently configured deploy SHA for the current environment.</p></dd>
 <dt class="flush"><code>launch</code></dt><dd><p>Interactive command to create AWS resources for a new environment.</p></dd>
 <dt><code>terminate</code></dt><dd><p>Destroy all AWS resources associated with the current environment. Only
@@ -178,7 +179,7 @@ created before using <code>ah</code>.</dd>
 
 <p>The following configuration files are used to configure the <code>ah</code> environment.
 The format of these files is one <var>NAME</var>=<var>value</var> pair per line, suitable for
-eval by the <code>bash(1)</code> shell.</p>
+eval by the <code>bash</code>(1) shell.</p>
 
 <dl>
 <dt><var>$APPDIR</var><code>/.ah/ah.conf</code></dt><dd><p>This file contains the application configuration, as set by the <code>init</code>
@@ -198,7 +199,7 @@ law.</p>
 
 <h2 id="SEE-ALSO">SEE ALSO</h2>
 
-<p><span class="man-ref">ah<span class="s">(8)</span></span>, <span class="man-ref">aws<span class="s">(1)</span></span></p>
+<p><code>ah</code>(8), <code>aws</code>(1), <code>git</code>(1)</p>
 
 
   <ol class='man-decor man-foot man foot'>

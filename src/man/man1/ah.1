@@ -85,8 +85,8 @@ Update the current environment\'s application config variables, read from \fIstd
 Print the application config variables stored for the current environment by the last \fBputvar\fR\.
 .
 .TP
-\fBputsha\fR [\fIsha\fR]
-Set the configured deploy SHA for the current environment to \fIsha\fR if provided, otherwise use the SHA of \fBHEAD\fR\.
+\fBputsha\fR [\fIrev\fR]
+Set the configured deploy SHA for the current environment to the SHA associated with git revision \fIrev\fR (or \fBHEAD\fR if not provided)\. See the \fBSPECIFYING REVISIONS\fR section of the \fBgit\-rev\-parse\fR(1) manual for details\.
 .
 .TP
 \fBgetsha\fR
@@ -120,7 +120,7 @@ The following environment variables must be set before using \fBah\fR:
 The name of the S3 bucket allocated for use by \fBah\fR\. This bucket must be created before using \fBah\fR\.
 .
 .SH "FILES"
-The following configuration files are used to configure the \fBah\fR environment\. The format of these files is one \fINAME\fR=\fIvalue\fR pair per line, suitable for eval by the \fBbash(1)\fR shell\.
+The following configuration files are used to configure the \fBah\fR environment\. The format of these files is one \fINAME\fR=\fIvalue\fR pair per line, suitable for eval by the \fBbash\fR(1) shell\.
 .
 .TP
 \fI$APPDIR\fR\fB/\.ah/ah\.conf\fR
@@ -134,4 +134,4 @@ This file contains the name of the current default environment, as set by the \f
 Copyright \(co 2017 Adzerk \fB<engineering@adzerk\.com>\fR, distributed under the Eclipse Public License, version 1\.0\. This is free software: you are free to change and redistribute it\. There is NO WARRANTY, to the extent permitted by law\.
 .
 .SH "SEE ALSO"
-ah(8), aws(1)
+\fBah\fR(8), \fBaws\fR(1), \fBgit\fR(1)

@@ -92,9 +92,10 @@ environment before any other environment scope commands are attempted.
     Print the application config variables stored for the current environment
     by the last `putvar`.
 
-  * `putsha` [<sha>]:
-    Set the configured deploy SHA for the current environment to <sha> if
-    provided, otherwise use the SHA of `HEAD`.
+  * `putsha` [<rev>]:
+    Set the configured deploy SHA for the current environment to the SHA
+    associated with git revision <rev> (or `HEAD` if not provided). See the
+    `SPECIFYING REVISIONS` section of the `git-rev-parse`(1) manual for details.
 
   * `getsha`:
     Print the currently configured deploy SHA for the current environment.
@@ -131,7 +132,7 @@ The following environment variables must be set before using `ah`:
 
 The following configuration files are used to configure the `ah` environment.
 The format of these files is one <NAME>=<value> pair per line, suitable for
-eval by the `bash(1)` shell.
+eval by the `bash`(1) shell.
 
   * <$APPDIR>`/.ah/ah.conf`:
     This file contains the application configuration, as set by the `init`
@@ -151,4 +152,4 @@ law.
 
 ## SEE ALSO
 
-ah(8), aws(1)
+`ah`(8), `aws`(1), `git`(1)
