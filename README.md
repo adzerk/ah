@@ -1,4 +1,4 @@
-# ah
+# ah ![it's good](https://img.shields.io/badge/is%20it%20good-yes-brightgreen.svg)
 
 Deployment automation tool.
 
