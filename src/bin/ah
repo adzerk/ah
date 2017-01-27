@@ -26,9 +26,8 @@ ah_load_conf() {
   [[ -n "$vars" ]] && . $1 && export $vars
 }
 
-[[ -n "$AH_BUCKET" ]] || ah_die "AH_BUCKET environment variable must be set"
-
 ah_load_conf .ah/ah.conf
+[[ -n "$AH_BUCKET" ]] || ah_die "AH_BUCKET environment variable must be set"
 ah_load_conf .ah/env
 
 # Bootstrapping ###############################################################
