@@ -4,19 +4,27 @@ if ! [[ -t 0 ]]; then
   vars=$(cat)
 else
   while true; do
+    dfl=$AH_BUCKET
+    read -p "[AH_BUCKET] S3 bucket for ah to use? [${AH_BUCKET:-$dfl}] " AH_BUCKET
+    export AH_BUCKET="${AH_BUCKET:=$dfl}"
+
     dfl=$(basename "$PWD")
-    read -p "App name? [${AH_APP:-$dfl}] " AH_APP
+    read -p "[AH_APP] App name? [${AH_APP:-$dfl}] " AH_APP
     export AH_APP="${AH_APP:=$dfl}"
 
+    dfl="${AH_TARGET:-target}"
+    read -p "[AH_TARGET] Target/binaries dir? [${AH_TARGET:-$dfl}] " AH_TARGET
+    export AH_TARGET="${AH_TARGET:=$dfl}"
+
     dfl="$AH_BILLING_GROUP"
-    read -p "Billing group? [${AH_BILLING_GROUP:-$dfl}] " AH_BILLING_GROUP
+    read -p "[AH_BILLING_GROUP] Billing group? [${AH_BILLING_GROUP:-$dfl}] " AH_BILLING_GROUP
     export AH_BILLING_GROUP="${AH_BILLING_GROUP:=$dfl}"
 
     dfl="$AH_BILLING_PROJECT"
-    read -p "Billing project? [${AH_BILLING_PROJECT:-$dfl}] " AH_BILLING_PROJECT
+    read -p "[AH_BILLING_PROJECT] Billing project? [${AH_BILLING_PROJECT:-$dfl}] " AH_BILLING_PROJECT
     export AH_BILLING_PROJECT="${AH_BILLING_PROJECT:=$dfl}"
 
-    vars=$(set |grep -E '^AH_(APP|BILLING_GROUP|BILLING_PROJECT)=')
+    vars=$(set |grep -E '^AH_(BUCKET|APP|TARGET|BILLING_GROUP|BILLING_PROJECT)=')
 
     echo
     echo "$vars"

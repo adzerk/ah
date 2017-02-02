@@ -3,23 +3,36 @@
 ## helpers
 ###############################################################################
 
+ah_var() {
+  local val=${!1}
+  if [[ -z "$val" ]]; then
+    case "$1" in
+      AH_BUCKET)  ah_die "AH_BUCKET environment variable not set" ;;
+      AH_APP)     ah_die "AH_APP not set: do '$AH init'" ;;
+      AH_TARGET)  ah_die "AH_TARGET not set: do '$AH init'" ;;
+      AH_ENV)     ah_die "AH_ENV not set: do '$AH env <name>'" ;;
+    esac
+  fi
+  echo "$val"
+}
+
 # Returns the S3 location of the git repo for this app.
 ah_repo() {
-  echo $AH_BUCKET/repo/$1
+  echo $(ah_var AH_BUCKET)/repo/$1
 }
 
 # Returns the S3 location of the secrets for this app.
 ah_secret() {
-  echo $AH_BUCKET/secrets/$1
+  echo $(ah_var AH_BUCKET)/secrets/$1
 }
 
 # Returns the S3 location of the data folder for this app.
 ah_data() {
-  echo $AH_BUCKET/data/$1
+  echo $(ah_var AH_BUCKET)/data/$1
 }
 
 ah_bin() {
-  echo $AH_BUCKET/bin
+  echo $(ah_var AH_BUCKET)/bin
 }
 
 # Returns the ARN of the specified S3 location.
@@ -34,7 +47,7 @@ ah_policy_arn() {
 
 ah_s3_ls() {
   local prefix=$(echo "$1" |sed 's@//*$@@')
-  aws s3api list-objects --bucket $AH_BUCKET --prefix "$prefix" \
+  aws s3api list-objects --bucket $(ah_var AH_BUCKET) --prefix "$prefix" \
     |jt Contents Key % |sed "s@^${prefix}/@@"
 }
 
@@ -89,7 +102,7 @@ ah_account_alias() {
 ###############################################################################
 
 ah_policy_exists() {
-  local name=${1:-$AH_APP}
+  local name=${1:-$(ah_var AH_APP)}
   aws iam list-policies --no-paginate \
     |jt Policies [ PolicyName % ] \
     |grep -q "^${name}\$"

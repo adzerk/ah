@@ -2,8 +2,8 @@
 
 export AH_APP=$AH_APP
 export AH_ENV=$AH_ENV
-export AH_REGION=$AH_REGION
 export AH_BUCKET=$AH_BUCKET
+export AH_REGION=$(ec2metadata --availability-zone |sed 's@.$@@')
 
 # install packages
 

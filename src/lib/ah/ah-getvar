@@ -1,8 +1,3 @@
 # vim: set ft=sh:
 
-[[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
-[[ -z "$AH_ENV" ]] && ah_die "no environment set: do '$AH env <env>'"
-
-infile=${1:--}
-
-aws s3 cp "s3://${AH_BUCKET}/data/${AH_APP}/${AH_ENV}.env" "$infile"
+aws s3 cp "s3://$(ah_var AH_BUCKET)/data/$(ah_var AH_APP)/$(ah_var AH_ENV).env" -

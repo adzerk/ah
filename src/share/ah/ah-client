@@ -1,10 +1,12 @@
 
-[[ -z "$AH_REGION" || -z "$AH_BUCKET" || -z "$AH_APP" || -z "$AH_ENV" ]] \
+[[ -z "$AH_BUCKET" || -z "$AH_APP" || -z "$AH_ENV" ]] \
   && echo "missing environment configuration" 1>&2 && exit 1
 
 appdir=/opt/$AH_APP
 appgit=s3://$AH_BUCKET/repo/$AH_APP
 appenv=s3://$AH_BUCKET/data/$AH_APP/${AH_ENV}.env
+appsha=s3://$AH_BUCKET/data/$AH_APP/${AH_ENV}.sh
+s3cret=s3://$AH_BUCKET/secrets
 
 usage() {
   local prog=$(basename ${BASH_SOURCE[0]})
@@ -30,10 +32,10 @@ warn() { echo -e "\033[33m$1\033[0m" 1>&2; }
 update_vars() {
   info "Fetching env vars..."
   mkdir -p .ah
-  aws s3 ls s3://$AH_BUCKET/secrets/ \
+  aws s3 ls ${s3cret}/ \
     |awk '{print $NF}' \
     | while read key; do
-      val=$(aws s3 cp s3://$AH_BUCKET/secrets/$key - 2>/dev/null) || continue ; \
+      val=$(aws s3 cp ${s3cret}/$key - 2>/dev/null) || continue ; \
       echo "${key##*/}=$val" ; \
     done > .ah/ah.env
   aws s3 cp $appenv - 2>/dev/null >> .ah/ah.env
@@ -52,7 +54,7 @@ shift $((OPTIND-1))
 
 info "Updating env version..."
 # this file exports the AH_SHA definition set by 'ah putsha'
-. <(aws s3 cp s3://$AH_BUCKET/data/$AH_APP/${AH_ENV}.sh -)
+. <(aws s3 cp $appsha)
 
 appsrc=$(mktemp -d -p /opt ${AH_APP}.${AH_SHA}.XXX)
 apptgz=s3://$AH_BUCKET/repo/$AH_APP/${AH_SHA}.tar.gz
@@ -60,23 +62,7 @@ apptgt=s3://$AH_BUCKET/data/$AH_APP/${AH_SHA}.tar.gz
 
 pushd $appsrc
   info "Fetching repo..."
-  if ! (aws s3 cp $apptgz - |tar xzvf -); then
-    # bare repo was the old way that ah used to do it
-    warn "Falling back to bare repo in ah compatibility mode..."
-
-    gittmp=$(mktemp -d)
-    aws s3 cp --recursive $appgit $gittmp > /dev/null
-
-    info "Cloning from bare repo..."
-    git clone $gittmp .
-    git checkout $AH_SHA
-    rm -rf $gittmp
-
-    info "Fetching target..."
-    mkdir target
-    aws s3 cp $apptgt - |(cd target && tar xzvf -)
-  fi
-
+  aws s3 cp $apptgz - |tar xzvf -
   update_vars
   eval "$(cat .ah/ah.env |sed 's@^@export @')"
 popd > /dev/null

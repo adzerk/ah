@@ -1,7 +1,5 @@
 # vim: set ft=sh:
 
-[[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
-
 status=$(aws autoscaling describe-auto-scaling-groups \
   |jt AutoScalingGroups \
     [ Tags [ Key % ] [ Value % ] ] \
@@ -12,9 +10,10 @@ status=$(aws autoscaling describe-auto-scaling-groups \
       [ HealthStatus % ] \
       [ LifecycleState % ] \
   |grep ^AhApplication \
-  |awk "\$2 == \"$AH_APP\" {print}" \
+  |awk "\$2 == \"$(ah_var AH_APP)\" {print}" \
   |cut -f3- \
-  |sort)
+  |sort
+)
 
 dns=$(aws ec2 describe-instances --instance-ids $(echo "$status" |cut -f2) \
   |jt Reservations Instances [ InstanceId % ] [ PublicDnsName % ])

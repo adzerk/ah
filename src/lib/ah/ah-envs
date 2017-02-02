@@ -17,11 +17,9 @@ while getopts a o; do
 done
 shift $((OPTIND-1))
 
-[[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
-
 aws autoscaling describe-auto-scaling-groups \
   |jt AutoScalingGroups \
     [ Tags [ Key % ] [ Value % ] ] \
     [ Tags [ Key % ] [ Value % ] ] \
-  |awk -F '	' "\$1 == \"AhApplication\" && \$2 == \"$AH_APP\" && \$3 == \"AhEnvironment\" {print \$4}" \
+  |awk -F '	' "\$1 == \"AhApplication\" && \$2 == \"$(ah_var AH_APP)\" && \$3 == \"AhEnvironment\" {print \$4}" \
   |sort

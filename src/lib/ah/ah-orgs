@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-aws s3api list-objects-v2 --bucket $AH_BUCKET --prefix etc \
+aws s3api list-objects-v2 --bucket $(ah_var AH_BUCKET) --prefix etc \
   |jt Contents [ Key % ] [ LastModified % ] \
   |sed 's@^etc/@@' \
   |awk -F '	' '$1 ~ /\.conf$/ {print}' \

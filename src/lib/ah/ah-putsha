@@ -1,7 +1,5 @@
 # vim: set ft=sh:
 
-[[ -z "$AH_ENV" ]] && ah_die "no environment set: do '$AH env <env>'"
-
 if [[ -n "$1" ]]; then
   sha=$(git rev-parse "$1")
 else
@@ -9,5 +7,5 @@ else
 fi
 
 echo -n "Setting deploy SHA..."
-echo "export AH_SHA=$sha" |aws s3 cp - s3://$(ah_data $AH_APP)/${AH_ENV}.sh > /dev/null
+echo "export AH_SHA=$sha" |aws s3 cp - s3://$(ah_data $(ah_var AH_APP))/$(ah_var AH_ENV).sh > /dev/null
 echo done.

@@ -1,5 +1,5 @@
 # vim: set ft=sh:
 
 echo -n "Uploading ah-client to S3..."
-aws s3 cp ${AH_SHR}/ah-client s3://${AH_BUCKET}/bin/ah-client2 > /dev/null
+aws s3 cp ${AH_SHR}/ah-client s3://$(ah_var AH_BUCKET)/bin/ah-client2 > /dev/null
 echo done.

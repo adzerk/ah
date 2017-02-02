@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 
-[[ -z "$AH_ENV" ]] && ah_die "environment not configured: do '$AH env <name>'"
-
 [[ $# -lt 1 ]] && ah_die "secret name required"
 
 secret=$1
-policy_name="${1}=${AH_ENV}"
+policy_name="${1}=$(ah_var AH_ENV)"
 policy_arn=$(ah_policy_arn ah/secrets/$policy_name)
 
 ah_check "policy exists" ah_policy_exists "$policy_name" || exit 0
 
 echo -n "Detaching policy from environment role..."
-aws iam detach-role-policy --role-name $AH_ENV --policy-arn $policy_arn > /dev/null
+aws iam detach-role-policy --role-name $(ah_var AH_ENV) --policy-arn $policy_arn > /dev/null
 echo done.
 
 echo -n "Deleting policy..."

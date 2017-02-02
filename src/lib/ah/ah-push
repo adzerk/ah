@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
 
-[[ -z "$AH_APP" ]] && ah_die "application not configured: do '$AH init'"
-
 hash=$(git rev-parse HEAD)
+s3uri="s3://$(ah-repo "$(ah_var AH_APP)")/${hash}.tar.gz"
 tmp1=$(mktemp)
 tmp2=$(mktemp)
 
 trap "rm -f $tmp1 $tmp2" EXIT
 
-echo -n "Pushing repo..."
+echo -n "Creating tarball..."
 git archive --format tar $hash > $tmp1
-tar cf $tmp2 target
-tar Af $tmp1 $tmp2
-cat $tmp1 |gzip -9 |aws s3 cp - s3://$(ah_repo $AH_APP)/${hash}.tar.gz
+
+if [[ -d "$(ah_var AH_TARGET)" ]]; then
+  echo -n "adding ${AH_TARGET}..."
+  tar cf $tmp2 "$AH_TARGET"
+  tar Af $tmp1 $tmp2
+fi
+echo done.
+
+echo -n "Pushing repo to $s3uri..."
+cat $tmp1 |gzip -9 |aws s3 cp - "$s3uri"
 echo done.

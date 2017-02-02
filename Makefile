@@ -17,6 +17,7 @@ install: all
 uninstall:
 	rm -rf $(PREFIX)/{bin,etc,lib,share}/ah
 	rm -f $(PREFIX)/man/man1/ah.1
+	rm -f $(PREFIX)/man/man1/ah-client.1
 
 tools: tools/json-table.tar.gz
 
