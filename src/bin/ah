@@ -7,6 +7,7 @@ AH_BIN="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 AH_LIB="$( realpath "$AH_BIN/../lib/ah" )"
 AH_SHR="$( realpath "$AH_BIN/../share/ah" )"
 AH_CFG="${HOME}/.ah"
+AH_EXT="${AH_CFG}/extensions"
 
 export PATH="${AH_LIB}:$PATH"
 
@@ -29,11 +30,24 @@ ah_load_conf() {
 ah_load_conf .ah/ah.conf
 ah_load_conf .ah/env
 
+# Load AH config script
+
+if [[ -f ${AH_CFG}/config ]]; then
+  ${AH_CFG}/config > /dev/null
+fi
+
 # Bootstrapping ###############################################################
 
 if [[ $# -gt 0 ]]; then
   AH_CMD="$1"
-  AH_DOIT=$AH_LIB/ah-${1}
+  AH_TRYIT=$AH_EXT/ah-${AH_CMD}/run
+
+  if [[ -e $AH_TRYIT ]]; then
+    AH_DOIT=$AH_TRYIT
+  else
+    AH_DOIT=$AH_LIB/ah-${AH_CMD}
+  fi
+
   shift 1
 
   if [[ ! -e $AH_DOIT ]]; then
@@ -44,4 +58,8 @@ if [[ $# -gt 0 ]]; then
   . $AH_DOIT
 else
   ls -1 $AH_LIB |grep ^ah- |sed s/^...//
+  if [[ -d $AH_EXT && $(ls -A $AH_EXT) ]]; then
+    echo -e "\nExtensions:\n"
+    ls -1 $AH_EXT |grep ^ah- |sed s/^...//
+  fi
 fi
