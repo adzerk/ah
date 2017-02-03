@@ -144,9 +144,9 @@ environment before any other environment scope commands are attempted.</p>
 <dl>
 <dt><code>env</code> [<var>env</var>]</dt><dd><p>Set the default environment to <var>env</var> if <var>env</var> is specified, or print the
 current environment name.</p></dd>
-<dt class="flush"><code>putvar</code></dt><dd><p>Update the current environment's application config variables, read from
+<dt class="flush"><code>putvars</code></dt><dd><p>Update the current environment's application config variables, read from
 <var>stdin</var>. See <strong>FILES</strong> below for a description of the expected format.</p></dd>
-<dt class="flush"><code>getvar</code></dt><dd><p>Print the application config variables stored for the current environment
+<dt class="flush"><code>getvars</code></dt><dd><p>Print the application config variables stored for the current environment
 by the last <code>putvar</code>.</p></dd>
 <dt><code>putsha</code> [<var>rev</var>]</dt><dd><p>Set the configured deploy SHA for the current environment to the SHA
 associated with git revision <var>rev</var> (or <code>HEAD</code> if not provided). See the
@@ -204,7 +204,7 @@ law.</p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>
-    <li class='tc'>January 2017</li>
+    <li class='tc'>February 2017</li>
     <li class='tr'>ah(1)</li>
   </ol>
 

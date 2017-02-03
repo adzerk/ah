@@ -84,11 +84,11 @@ environment before any other environment scope commands are attempted.
     Set the default environment to <env> if <env> is specified, or print the
     current environment name.
 
-  * `putvar`:
+  * `putvars`:
     Update the current environment's application config variables, read from
     <stdin>. See **FILES** below for a description of the expected format.
 
-  * `getvar`:
+  * `getvars`:
     Print the application config variables stored for the current environment
     by the last `putvar`.
 
