@@ -60,23 +60,9 @@ apptgt=s3://$AH_BUCKET/data/$AH_APP/${AH_SHA}.tar.gz
 
 pushd $appsrc
   info "Fetching repo..."
-  if ! (aws s3 cp $apptgz - |tar xzvf -); then
-    # bare repo was the old way that ah used to do it
-    warn "Falling back to bare repo in ah compatibility mode..."
+  aws s3 cp $apptgz - |tar xzvf -
 
-    gittmp=$(mktemp -d)
-    aws s3 cp --recursive $appgit $gittmp > /dev/null
-
-    info "Cloning from bare repo..."
-    git clone $gittmp .
-    git checkout $AH_SHA
-    rm -rf $gittmp
-
-    info "Fetching target..."
-    mkdir target
-    aws s3 cp $apptgt - |(cd target && tar xzvf -)
-  fi
-
+  info "Updating environment variables..."
   update_vars
   eval "$(cat .ah/ah.env |sed 's@^@export @')"
 popd > /dev/null
