@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 hash=$(git rev-parse HEAD)
-s3uri="s3://$(ah-repo "$(ah_var AH_APP)")/${hash}.tar.gz"
+s3uri="s3://$(ah_repo "$(ah_var AH_APP)")/${hash}.tar.gz"
 tmp1=$(mktemp)
 tmp2=$(mktemp)
 
@@ -17,6 +17,6 @@ if [[ -d "$(ah_var AH_TARGET)" ]]; then
 fi
 echo done.
 
-echo -n "Pushing repo to $s3uri..."
+echo -n "Pushing repo to S3..."
 cat $tmp1 |gzip -9 |aws s3 cp - "$s3uri"
 echo done.
