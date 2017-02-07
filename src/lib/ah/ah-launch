@@ -146,7 +146,7 @@ aws autoscaling create-launch-configuration \
   --image-id $AH_MACHINE_IMAGE_ID \
   --key-name $AH_KEY_PAIR \
   --security-groups $AH_ENV \
-  --user-data "$(cat $AH_SHR/user-data.sh |envsubst '$AH_APP:$AH_ENV:$AH_BUCKETN')" \
+  --user-data "$(cat $AH_SHR/user-data.sh |envsubst '$AH_APP:$AH_ENV:$AH_BUCKET')" \
   --instance-type $AH_INSTANCE_TYPE \
   --iam-instance-profile $(ah_instance_profile_arn ah/$AH_ENV) \
   > /dev/null
