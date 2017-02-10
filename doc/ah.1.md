@@ -128,6 +128,15 @@ The following environment variables must be set before using `ah`:
     The name of the S3 bucket allocated for use by `ah`. This bucket must be
     created before using `ah`.
 
+## CONFIG
+
+  * `ah` will source `$HOME/.ah/config`. This is used to set ah environment
+    variables and extend the functionality of ah.
+  * A convenience function `ah_load_extension repo ref` is provided. This will
+    install ah extensions from the specified repo at the specified revision to
+    `$HOME/.ah/extensions`. For example:
+    `ah_load_extension git@github.com:yourorg/cool-ah-extensions 2.0`
+
 ## FILES
 
 The following configuration files are used to configure the `ah` environment.
