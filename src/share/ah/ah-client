@@ -54,7 +54,7 @@ shift $((OPTIND-1))
 
 info "Updating env version..."
 # this file exports the AH_SHA definition set by 'ah putsha'
-. <(aws s3 cp $appsha)
+. <(aws s3 cp $appsha -)
 
 appsrc=$(mktemp -d -p /opt ${AH_APP}.${AH_SHA}.XXX)
 apptgz=s3://$AH_BUCKET/repo/$AH_APP/${AH_SHA}.tar.gz
@@ -63,6 +63,8 @@ apptgt=s3://$AH_BUCKET/data/$AH_APP/${AH_SHA}.tar.gz
 pushd $appsrc
   info "Fetching repo..."
   aws s3 cp $apptgz - |tar xzvf -
+
+  info "Updating environment variables..."
   update_vars
   eval "$(cat .ah/ah.env |sed 's@^@export @')"
 popd > /dev/null
