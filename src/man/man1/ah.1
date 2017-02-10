@@ -119,6 +119,16 @@ The following environment variables must be set before using \fBah\fR:
 \fBAH_BUCKET\fR
 The name of the S3 bucket allocated for use by \fBah\fR\. This bucket must be created before using \fBah\fR\.
 .
+.SH "CONFIG"
+.
+.IP "\(bu" 4
+\fBah\fR will source \fB$HOME/\.ah/config\fR\. This is used to set ah environment variables and extend the functionality of ah\.
+.
+.IP "\(bu" 4
+A convenience function \fBah_load_extension repo ref\fR is provided\. This will install ah extensions from the specified repo at the specified revision to \fB$HOME/\.ah/extensions\fR\. For example: \fBah_load_extension git@github\.com:yourorg/cool\-ah\-extensions 2\.0\fR
+.
+.IP "" 0
+.
 .SH "FILES"
 The following configuration files are used to configure the \fBah\fR environment\. The format of these files is one \fINAME\fR=\fIvalue\fR pair per line, suitable for eval by the \fBbash\fR(1) shell\.
 .

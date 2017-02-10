@@ -32,6 +32,19 @@ commands and features of the program:
 man ah
 ```
 
+## Config
+
+Global config for `ah` is stored at `$HOME/.ah/config`
+
+### Extensions
+
+`ah` extensions should be installed to `$HOME/.ah/extensions`. A convenience
+function for installing ah extensions is provided. For example:
+
+```bash
+load_ah_extension git@github.com:yourorg/cool-ah-extensions 2.0
+```
+
 ## Getting Started
 
 The following sections will take you thorough some basic setup and create a
@@ -45,10 +58,10 @@ for `ah` to store things. You only need to do this once.
 > **Note:** you want to make sure this bucket is only accessible by users who
 > will be authorized to manage and deploy `ah` applications.
 
-After the bucket is created add an environment variable to your shell:
+After the bucket is created add an environment to your config file:
 
 ```bash
-export AH_BUCKET=your-bucket-name
+echo AH_BUCKET=your-bucket-name >> $HOME/.ah/config
 ```
 
 ### Create a Default Org

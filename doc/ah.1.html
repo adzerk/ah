@@ -62,6 +62,7 @@
     <a href="#DESCRIPTION">DESCRIPTION</a>
     <a href="#COMMANDS">COMMANDS</a>
     <a href="#ENVIRONMENT">ENVIRONMENT</a>
+    <a href="#CONFIG">CONFIG</a>
     <a href="#FILES">FILES</a>
     <a href="#COPYRIGHT">COPYRIGHT</a>
     <a href="#SEE-ALSO">SEE ALSO</a>
@@ -173,6 +174,18 @@ secret file for the variable <var>secret</var>.</p></dd>
 <dt><code>AH_BUCKET</code></dt><dd>The name of the S3 bucket allocated for use by <code>ah</code>. This bucket must be
 created before using <code>ah</code>.</dd>
 </dl>
+
+
+<h2 id="CONFIG">CONFIG</h2>
+
+<ul>
+<li><code>ah</code> will source <code>$HOME/.ah/config</code>. This is used to set ah environment
+variables and extend the functionality of ah.</li>
+<li>A convenience function <code>ah_load_extension repo ref</code> is provided. This will
+install ah extensions from the specified repo at the specified revision to
+<code>$HOME/.ah/extensions</code>. For example:
+<code>ah_load_extension git@github.com:yourorg/cool-ah-extensions 2.0</code></li>
+</ul>
 
 
 <h2 id="FILES">FILES</h2>
