@@ -6,7 +6,7 @@ appdir=/opt/$AH_APP
 appgit=s3://$AH_BUCKET/repo/$AH_APP
 appenv=s3://$AH_BUCKET/data/$AH_APP/${AH_ENV}.env
 appsha=s3://$AH_BUCKET/data/$AH_APP/${AH_ENV}.sh
-s3cret=s3://$AH_BUCKET/secrets
+s3cret=s3://$AH_BUCKET/secrets/
 
 usage() {
   local prog=$(basename ${BASH_SOURCE[0]})
