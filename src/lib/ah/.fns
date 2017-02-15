@@ -157,7 +157,6 @@ ah_detach_all_role_policies() {
         --policy-arn $arn
     # TODO (maybe): If the policy isn't attached to any other roles, prompt the
     # user to delete it.
-    echo $arn
   done
 }
 
