@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # vim: set ft=sh:
 
 echo -n "Uploading ah-client to S3..."

@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # vim: set ft=sh:
 
 aws s3 cp "s3://$(ah_var AH_BUCKET)/data/$(ah_var AH_APP)/$(ah_var AH_ENV).env" -
