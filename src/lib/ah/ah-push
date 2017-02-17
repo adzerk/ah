@@ -2,8 +2,8 @@
 
 hash=$(git rev-parse HEAD)
 s3uri="s3://$(ah_repo "$(ah_var AH_APP)")/${hash}.tar.gz"
-tmp1=$(mktemp)
-tmp2=$(mktemp)
+tmp1=$(ah_mktemp)
+tmp2=$(ah_mktemp)
 
 trap "rm -f $tmp1 $tmp2" EXIT
 
@@ -12,8 +12,8 @@ git archive --format tar $hash > $tmp1
 
 if [[ -d "$(ah_var AH_TARGET)" ]]; then
   echo -n "adding ${AH_TARGET}..."
-  tar cf $tmp2 "$AH_TARGET"
-  tar Af $tmp1 $tmp2
+  ah_tar cf $tmp2 "$AH_TARGET"
+  ah_tar Af $tmp1 $tmp2
 fi
 echo done.
 

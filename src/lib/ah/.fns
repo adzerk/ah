@@ -204,3 +204,12 @@ ah_mktemp() {
        exit 1 ;;
   esac
 }
+
+ah_tar() {
+  case $(uname -s) in
+    Darwin) gtar $@;;
+    Linux) tar $@;;
+    *) (>&2 echo "Unknown system '$(uname -s)', don't now how to ah_tar");
+       exit 1 ;;
+  esac
+}    
