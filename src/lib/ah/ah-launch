@@ -8,7 +8,7 @@ ah_check "launch configuration does not already exist" ah_not ah_launch_config_e
 ah_check "autoscaling group does not already exist" ah_not ah_asg_exists $AH_ENV || ah_die "aborted."
 
 echo -n "Loading options..."
-IMAGES=$(aws ec2 describe-images --executable-users $(ah_account_id) |jt Images [ ImageId % ] [ Name % ])
+IMAGES=$(aws ec2 describe-images --owners $(ah_account_id) |jt Images [ ImageId % ] [ Name % ])
 KEYS=$(aws ec2 describe-key-pairs --no-paginate |jt KeyPairs [ KeyName % ])
 ORGS=$(ah_s3_ls etc |sed 's@\.conf$@@')
 echo "done."
