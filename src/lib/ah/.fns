@@ -119,6 +119,20 @@ ah_sg_exists() {
     |grep -q "^${name}\$"
 }
 
+ah_list_sgs() {
+  aws ec2 describe-security-groups --no-paginate \
+    |jt SecurityGroups [ GroupId % ] [ GroupName % ]
+}
+
+
+## availability zones
+
+ah_list_azs() {
+  aws ec2 describe-availability-zones \
+    |jt AvailabilityZones ZoneName % \
+    | grep -o '.$' | sort
+}
+
 ## roles
 ###############################################################################
 
@@ -203,4 +217,59 @@ ah_mktemp() {
     *) (>&2 echo "Unknown system '$(uname -s)', don't now how to ah_mktemp");
        exit 1 ;;
   esac
+}
+
+## dialogs
+###############################################################################
+ah_select() {
+  title="${1:-Select Option}"
+  shift
+  if [[ "$@" ]]; then
+    local enabled=$(echo "$@" |xargs -n1 echo | sed 's/$/\ton/' | sort)
+    title="${title} [$(echo "$enabled" | cut -d'	' -f1 | tr '[\n]' '[,]' | sed -e 's/,$//')]"
+  fi
+  cmd=(dialog --nocancel --radiolist "${title}" 22 76 16)
+  # options=($(join -t'	' -a1 -j1 <(cat | sort) <(echo "$enabled") \
+  #              |awk -F'	' 'NF==3 {print} NF==2 {print $1 "\t" $2 "\toff"}' | sort -k2))
+
+  options=('hello' 'yes' on
+           'goodbye' 'no' off)
+  choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+  clear
+  for choice in $choices
+  do
+    echo $choice
+  done
+}
+
+ah_checklist() {
+  title="${1:-Select Options}"
+  shift
+  if [[ "$@" ]]; then
+    local enabled=$(echo "$@" |xargs -n1 echo | sed 's/$/\ton/' | sort)
+    title="${title} [$(echo "$enabled" | cut -d'	' -f1 | tr '[\n]' '[,]' | sed -e 's/,$//')]"
+  fi
+  cmd=(dialog --nocancel --separate-output --checklist "${title}" 22 76 16)
+
+  options=('hello world' 'yes' on
+           'goodbye' 'no' off)
+
+
+
+  # options=($(join -t'	' -a1 -j1 <(cat | sort) <(echo "$enabled") \
+  #      |awk -F'	' 'NF==3 {print} NF==2 {print $1 "\t" $2 "\toff"}' | sort -k2))
+  choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+  echo "$choices" > /tmp/wat
+  clear
+  for choice in "$choices"
+  do
+    echo "$choice"
+  done
+}
+
+ah_inputbox() {
+  title="${1}"
+  defaultmessage="$2"
+  cmd=(dialog --nocancel --inputbox "${title}" 22 76 "${defaultmessage}")
+  echo $("${cmd[@]}" 2>&1 >/dev/tty)
 }
