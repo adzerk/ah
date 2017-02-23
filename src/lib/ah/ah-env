@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # vim: set ft=sh:
 
 if [[ -z "$1" ]]; then
