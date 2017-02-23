@@ -29,7 +29,7 @@ ah_load_conf() {
 
 ah_load_extension() {
   local sha
-  local ref=${2:master}
+  local ref="${2:-master}"
   local repo="${1}"
   local name=$(echo ${1##*/} | sed 's/\.git$//')
   local to=$HOME/.ah/extensions/$name
