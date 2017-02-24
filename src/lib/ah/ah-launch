@@ -20,12 +20,11 @@ select template in $ORGS; do
     break
   fi
 done
-
 while true; do
 
   dfl="$AH_SUBNETS"
-  read -p "[AH_SUBNETS] Subnets for VPC " AH_SUBNETS
-  export AH_SUBNETS="${AH_SUBNETS}"
+  read -p "[AH_SUBNETS] Subnets for VPC? [${AH_SUBNETS:-$dfl}] " AH_SUBNETS
+  export AH_SUBNETS="${AH_SUBNETS:=$dfl}"
 
   dfl="$AH_DEFAULT_SGS"
   read -p "[AH_DEFAULT_SGS] SGs for default ingress rules (all access)? [${AH_DEFAULT_SGS:-$dfl}] " AH_DEFAULT_SGS
