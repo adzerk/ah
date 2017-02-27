@@ -26,7 +26,7 @@ fi
 if ah_check "SG exists" ah_sg_exists $AH_ENV; then
   echo -n "Deleting SG..."
   aws ec2 delete-security-group \
-    --group-name $AH_ENV \
+    --group-id $(ah_sg_id_by_name $AH_ENV) \
     > /dev/null \
     || ah_die "can't delete SG."
   echo "done."

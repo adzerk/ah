@@ -109,14 +109,28 @@ ah_policy_exists() {
     |grep -q "^${name}\$"
 }
 
+## vpcs
+###############################################################################
+
+ah_list_vpcs() {
+  aws ec2 describe-vpcs \
+      |jt Vpcs [ VpcId ]
+}
+
 ## security groups
 ###############################################################################
 
 ah_sg_exists() {
   local name=$1
-  aws ec2 describe-security-groups --no-paginate --group-names $name \
+  aws ec2 describe-security-groups --no-paginate --filters "Name=group-name,Values=$name" \
     |jt SecurityGroups [ GroupName % ] \
     |grep -q "^${name}\$"
+}
+
+ah_sg_id_by_name() {
+  local name=$1
+  aws ec2 describe-security-groups --no-paginate --filters "Name=group-name,Values=$1" \
+    | jt SecurityGroups GroupId %
 }
 
 ## roles
