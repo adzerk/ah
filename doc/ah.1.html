@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv='content-type' value='text/html;charset=utf8'>
+  <meta name='generator' value='Ronn/v0.7.3 (http://github.com/rtomayko/ronn/tree/0.7.3)'>
+  <title>ah(1) - simple, service oriented management of AWS resources</title>
+  <style type='text/css' media='all'>
+  /* style: man */
+  body#manpage {margin:0}
+  .mp {max-width:100ex;padding:0 9ex 1ex 4ex}
+  .mp p,.mp pre,.mp ul,.mp ol,.mp dl {margin:0 0 20px 0}
+  .mp h2 {margin:10px 0 0 0}
+  .mp > p,.mp > pre,.mp > ul,.mp > ol,.mp > dl {margin-left:8ex}
+  .mp h3 {margin:0 0 0 4ex}
+  .mp dt {margin:0;clear:left}
+  .mp dt.flush {float:left;width:8ex}
+  .mp dd {margin:0 0 0 9ex}
+  .mp h1,.mp h2,.mp h3,.mp h4 {clear:left}
+  .mp pre {margin-bottom:20px}
+  .mp pre+h2,.mp pre+h3 {margin-top:22px}
+  .mp h2+pre,.mp h3+pre {margin-top:5px}
+  .mp img {display:block;margin:auto}
+  .mp h1.man-title {display:none}
+  .mp,.mp code,.mp pre,.mp tt,.mp kbd,.mp samp,.mp h3,.mp h4 {font-family:monospace;font-size:14px;line-height:1.42857142857143}
+  .mp h2 {font-size:16px;line-height:1.25}
+  .mp h1 {font-size:20px;line-height:2}
+  .mp {text-align:justify;background:#fff}
+  .mp,.mp code,.mp pre,.mp pre code,.mp tt,.mp kbd,.mp samp {color:#131211}
+  .mp h1,.mp h2,.mp h3,.mp h4 {color:#030201}
+  .mp u {text-decoration:underline}
+  .mp code,.mp strong,.mp b {font-weight:bold;color:#131211}
+  .mp em,.mp var {font-style:italic;color:#232221;text-decoration:none}
+  .mp a,.mp a:link,.mp a:hover,.mp a code,.mp a pre,.mp a tt,.mp a kbd,.mp a samp {color:#0000ff}
+  .mp b.man-ref {font-weight:normal;color:#434241}
+  .mp pre {padding:0 4ex}
+  .mp pre code {font-weight:normal;color:#434241}
+  .mp h2+pre,h3+pre {padding-left:0}
+  ol.man-decor,ol.man-decor li {margin:3px 0 10px 0;padding:0;float:left;width:33%;list-style-type:none;text-transform:uppercase;color:#999;letter-spacing:1px}
+  ol.man-decor {width:100%}
+  ol.man-decor li.tl {text-align:left}
+  ol.man-decor li.tc {text-align:center;letter-spacing:4px}
+  ol.man-decor li.tr {text-align:right;float:right}
+  </style>
+  <style type='text/css' media='all'>
+  /* style: ah.1 */
+  .mp {margin-left: auto;margin-right: auto}
+  </style>
+</head>
+<!--
+  The following styles are deprecated and will be removed at some point:
+  div#man, div#man ol.man, div#man ol.head, div#man ol.man.
+
+  The .man-page, .man-decor, .man-head, .man-foot, .man-title, and
+  .man-navigation should be used instead.
+-->
+<body id='manpage'>
+  <div class='mp' id='man'>
+
+  <div class='man-navigation' style='display:none'>
+    <a href="#NAME">NAME</a>
+    <a href="#SYNOPSIS">SYNOPSIS</a>
+    <a href="#DESCRIPTION">DESCRIPTION</a>
+    <a href="#COMMANDS">COMMANDS</a>
+    <a href="#ENVIRONMENT">ENVIRONMENT</a>
+    <a href="#CONFIG">CONFIG</a>
+    <a href="#FILES">FILES</a>
+    <a href="#COPYRIGHT">COPYRIGHT</a>
+    <a href="#SEE-ALSO">SEE ALSO</a>
+  </div>
+
+  <ol class='man-decor man-head man head'>
+    <li class='tl'>ah(1)</li>
+    <li class='tc'>AH MANUAL</li>
+    <li class='tr'>ah(1)</li>
+  </ol>
+
+  <h2 id="NAME">NAME</h2>
+<p class="man-name">
+  <code>ah</code> - <span class="man-whatis">simple, service oriented management of AWS resources</span>
+</p>
+
+<h2 id="SYNOPSIS">SYNOPSIS</h2>
+
+<p><code>ah</code> <var>command</var> [<var>OPTIONS</var>...]</p>
+
+<h2 id="DESCRIPTION">DESCRIPTION</h2>
+
+<p><strong>Ah</strong> is a tool for managing the infrastructure resources associated with
+services hosted on Amazon Web Services (AWS).</p>
+
+<h2 id="COMMANDS">COMMANDS</h2>
+
+<p>Commands are organized by scope: global, application, and environment.</p>
+
+<h3 id="Global-Commands">Global Commands</h3>
+
+<p>These commands are not specific to any application. They may be executed from
+any directory.</p>
+
+<dl>
+<dt class="flush"><code>orgs</code></dt><dd><p>Print a listing of existing org names.</p></dd>
+<dt><code>getorg</code> <var>org</var></dt><dd><p>Print the config settings associated with <var>org</var>.</p></dd>
+<dt><code>putorg</code> <var>org</var></dt><dd><p>Create or update the org named <var>org</var>, starting with a copy of <var>template</var> if
+provided. Input may be provided interactively from the terminal or via
+<var>stdin</var>. See <strong>FIlES</strong> below for a description of the expected format.</p></dd>
+<dt><code>rmorg</code> <var>org</var></dt><dd><p>Deletes the org named <var>org</var>.</p></dd>
+<dt class="flush"><code>upgrade</code></dt><dd><p>Update static <code>ah</code> bootstrapping files on S3. Needed when <code>ah</code> itself is
+updated to a new version.</p></dd>
+<dt><code>putsecret</code> <var>secret</var></dt><dd><p>Create or update the S3 secret file for the variable <var>secret</var>. The value is
+read from <var>stdin</var>. <strong>NOTE: the value must be explicitly quoted if it
+contains spaces, newlines, etc.</strong></p></dd>
+<dt class="flush"><code>grants</code></dt><dd><p>Print the table of S3 secret variable and <strong>ah</strong> environment names for all
+environments that have been granted access to S3 secret variable files.</p></dd>
+</dl>
+
+
+<h3 id="Application-Commands">Application Commands</h3>
+
+<p>These commands operate at the application level and must be executed from an
+application git directory. The <code>init</code> command must be executed to initialize
+the application before any other application or environment scope commands
+are attempted.</p>
+
+<dl>
+<dt class="flush"><code>init</code></dt><dd><p>Configure a new application and create associated AWS resources. Input may
+be provided interactively from the terminal or via <var>stdin</var>. See <strong>FILES</strong>
+below for a description of the expected format.</p></dd>
+<dt class="flush"><code>push</code></dt><dd><p>Push the <code>HEAD</code> of the current application git repo and the contents of
+the target directory to S3.</p></dd>
+<dt class="flush"><code>shas</code></dt><dd><p>Print the list of SHAs that have been uploaded via the <code>push</code> command for
+the current application.</p></dd>
+<dt><code>envs</code> [<code>-a</code>]</dt><dd><p>Print the list of environments associated with the current application. If
+the <code>-a</code> option is provided print the table of <strong>ah</strong> application and
+environment names for all environments.</p></dd>
+<dt class="flush"><code>status</code></dt><dd><p>Print status info for instances associated with this application.</p></dd>
+</dl>
+
+
+<h3 id="Environment-Commands">Environment Commands</h3>
+
+<p>These commands operate at the environment level and must be executed from the
+application git directory. The <code>env</code> command must be used to set the current
+environment before any other environment scope commands are attempted.</p>
+
+<dl>
+<dt><code>env</code> [<var>env</var>]</dt><dd><p>Set the default environment to <var>env</var> if <var>env</var> is specified, or print the
+current environment name.</p></dd>
+<dt class="flush"><code>putvars</code></dt><dd><p>Update the current environment's application config variables, read from
+<var>stdin</var>. See <strong>FILES</strong> below for a description of the expected format.</p></dd>
+<dt class="flush"><code>getvars</code></dt><dd><p>Print the application config variables stored for the current environment
+by the last <code>putvar</code>.</p></dd>
+<dt><code>putsha</code> [<var>rev</var>]</dt><dd><p>Set the configured deploy SHA for the current environment to the SHA
+associated with git revision <var>rev</var> (or <code>HEAD</code> if not provided). See the
+<code>SPECIFYING REVISIONS</code> section of the <code>git-rev-parse</code>(1) manual for details.</p></dd>
+<dt class="flush"><code>getsha</code></dt><dd><p>Print the currently configured deploy SHA for the current environment.</p></dd>
+<dt class="flush"><code>launch</code></dt><dd><p>Interactive command to create AWS resources for a new environment.</p></dd>
+<dt><code>terminate</code></dt><dd><p>Destroy all AWS resources associated with the current environment. Only
+resources managed by <code>ah</code> will be affected.</p></dd>
+<dt><code>secrets</code> [<code>-a</code>]</dt><dd><p>Print all S3 secrets to which the current environment has access, or if
+the <code>-a</code> option is specified print all secrets to which the current user
+has access. See <strong>FILES</strong> below for a description of the output format.</p></dd>
+<dt><code>grant</code> <var>secret</var></dt><dd><p>Grant permission for the current environment's instances to access the S3
+secret file for the variable <var>secret</var>.</p></dd>
+<dt><code>revoke</code> <var>secret</var></dt><dd><p>Revoke permission for the current environment's instances to access the S3
+secret file for the variable <var>secret</var>.</p></dd>
+</dl>
+
+
+<h2 id="ENVIRONMENT">ENVIRONMENT</h2>
+
+<p>The following environment variables must be set before using <code>ah</code>:</p>
+
+<dl>
+<dt><code>AH_BUCKET</code></dt><dd>The name of the S3 bucket allocated for use by <code>ah</code>. This bucket must be
+created before using <code>ah</code>.</dd>
+</dl>
+
+
+<h2 id="CONFIG">CONFIG</h2>
+
+<ul>
+<li><code>ah</code> will source <code>$HOME/.ah/config</code>. This is used to set ah environment
+variables and extend the functionality of ah.</li>
+<li>A convenience function <code>ah_load_extension repo ref</code> is provided. This will
+install ah extensions from the specified repo at the specified revision to
+<code>$HOME/.ah/extensions</code>. For example:
+<code>ah_load_extension git@github.com:yourorg/cool-ah-extensions 2.0</code></li>
+</ul>
+
+
+<h2 id="FILES">FILES</h2>
+
+<p>The following configuration files are used to configure the <code>ah</code> environment.
+The format of these files is one <var>NAME</var>=<var>value</var> pair per line, suitable for
+eval by the <code>bash</code>(1) shell.</p>
+
+<dl>
+<dt><var>$APPDIR</var><code>/.ah/ah.conf</code></dt><dd><p>This file contains the application configuration, as set by the <code>init</code>
+command. Settings in this file only apply to this application. This file
+<strong>must</strong> be committed to the git repository for the application.</p></dd>
+<dt><var>$APPDIR</var><code>/.ah/env</code></dt><dd><p>This file contains the name of the current default environment, as set by
+the <code>env</code> command.</p></dd>
+</dl>
+
+
+<h2 id="COPYRIGHT">COPYRIGHT</h2>
+
+<p>Copyright &copy; 2017 Adzerk <code>&lt;engineering@adzerk.com&gt;</code>, distributed under the
+Eclipse Public License, version 1.0. This is  free  software: you  are free to
+change and redistribute it. There is NO WARRANTY, to the extent permitted by
+law.</p>
+
+<h2 id="SEE-ALSO">SEE ALSO</h2>
+
+<p><code>ah</code>(8), <code>aws</code>(1), <code>git</code>(1)</p>
+
+
+  <ol class='man-decor man-foot man foot'>
+    <li class='tl'></li>
+    <li class='tc'>March 2017</li>
+    <li class='tr'>ah(1)</li>
+  </ol>
+
+  </div>
+</body>
+</html>
