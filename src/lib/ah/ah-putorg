@@ -8,7 +8,7 @@ AH_ORG=$1
 if ! [[ -t 0 ]]; then
   vars=$(cat)
 else
-  PS3="Use existing Org as a template?"
+  PS3="Existing Org to use as a template? "
   select template in "NO TEMPLATE" $(ah_s3_ls etc |sed 's@\.conf$@@'); do
     case "$template" in
       "NO TEMPLATE") break ;;

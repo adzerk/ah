@@ -7,24 +7,42 @@ ah_check "instance profile does not already exist" ah_not ah_instance_profile_ex
 ah_check "launch configuration does not already exist" ah_not ah_launch_config_exists $AH_ENV || ah_die "aborted."
 ah_check "autoscaling group does not already exist" ah_not ah_asg_exists $AH_ENV || ah_die "aborted."
 
+OLD_IFS="$IFS"
+
 echo -n "Loading options..."
+IFS=$'\n'
+VPCS=($(IFS="$OLD_IFS" aws ec2 describe-vpcs |jt Vpcs [ VpcId % ] [ Tags [ Key % ] [ Value % ] ] |sort |awk -F '	' '$2 == "Name" {print $1 "|" $3}'))
+SGS=($(IFS="$OLD_IFS" aws ec2 describe-security-groups |jt SecurityGroups [ GroupId % ] [ GroupName % ] [ Description % ] |sort |tr '[\t]' '[|]'))
+IFS="$OLD_IFS"
 IMAGES=$(aws ec2 describe-images --owners $(ah_account_id) |jt Images [ ImageId % ] [ Name % ])
 KEYS=$(aws ec2 describe-key-pairs --no-paginate |jt KeyPairs [ KeyName % ])
 ORGS=$(ah_s3_ls etc |sed 's@\.conf$@@')
+associate_public_ips=n
 echo "done."
 
-PS3="Org to use as a template? "
+dfl="$template"
+PS3="Org to use as a template? [${template:-$dfl}] "
 select template in $ORGS; do
-  if [[ -n "$template" ]]; then
+  if [[ -n "$template" || -n "$dfl" ]]; then
+    export template="${template:=$dfl}"
     . <(aws s3 cp s3://$(ah_var AH_BUCKET)/etc/${template}.conf - |grep . |sed 's@^@export @')
     break
   fi
 done
+
 while true; do
 
   dfl="$AH_VPC"
-  read -p "[AH_VPC] Use VPC (blank for none)? [${AH_VPC:-$dfl}] " AH_VPC
-  export AH_VPC="${AH_VPC:=$dfl}"
+  PS3="[AH_VPC] Launch into VPC? [${AH_VPC:-$dfl}] "
+  select AH_VPC in "NO VPC" "${VPCS[@]}"; do
+    if [[ $AH_VPC ]]; then
+      case "$AH_VPC" in
+        "NO VPC") AH_VPC="" ; break ;;
+        *) AH_VPC="$(echo "${AH_VPC:=$dfl}" |sed 's@|.*$@@')" ; break ;;
+      esac
+    fi
+  done
+  export AH_VPC
 
   if [[ $AH_VPC ]]; then
     dfl="$AH_SUBNETS"
@@ -40,6 +58,10 @@ while true; do
     dfl="$AH_AZS"
     read -p "[AH_AZS] Availability zones in which to launch instances? [${AH_AZS:-$dfl}] " AH_AZS
     export AH_AZS="${AH_AZS:=$dfl}"
+  else
+    dfl="$associate_public_ips"
+    read -p "[AH_PUBLIC] Assign public IPs to instances (y/n)? [${AH_PUBLIC:-$dfl}] " AH_PUBLIC
+    export AH_PUBLIC="${AH_PUBLIC:=$dfl}"
   fi
 
   dfl="$AH_BILLING_GROUP"
@@ -50,23 +72,25 @@ while true; do
   read -p "[AH_BILLING_PROJECT] Billing project? [${AH_BILLING_PROJECT:-$dfl}] " AH_BILLING_PROJECT
   export AH_BILLING_PROJECT="${AH_BILLING_PROJECT:=$dfl}"
 
-  PS3="[AH_MACHINE_IMAGE] Machine image? "
+  dfl="$AH_MACHINE_IMAGE"
+  PS3="[AH_MACHINE_IMAGE] Machine image? [${AH_MACHINE_IMAGE:-$dfl}] "
   select AH_MACHINE_IMAGE in $(echo "$IMAGES" |cut -f2 |sort); do
-    [[ -n "$AH_MACHINE_IMAGE" ]] && break
+    [[ -n "${AH_MACHINE_IMAGE:-$dfl}" ]] && break
   done
-  export AH_MACHINE_IMAGE
+  export AH_MACHINE_IMAGE="${AH_MACHINE_IMAGE:=$dfl}"
 
-  PS3="[AH_KEY_PAIR] Key pair? "
+  dfl="$AH_KEY_PAIR"
+  PS3="[AH_KEY_PAIR] Key pair? [${AH_KEY_PAIR:-$dfl}] "
   select AH_KEY_PAIR in $(echo "$KEYS" |sort); do
-    [[ -n "$AH_KEY_PAIR" ]] && break
+    [[ -n "${AH_KEY_PAIR:-$dfl}" ]] && break
   done
-  export AH_KEY_PAIR
+  export AH_KEY_PAIR="${AH_KEY_PAIR:=$dfl}"
 
   dfl="m3.medium"
   read -p "[AH_INSTANCE_TYPE] Instance type? [${AH_INSTANCE_TYPE:-$dfl}] " AH_INSTANCE_TYPE
   export AH_INSTANCE_TYPE="${AH_INSTANCE_TYPE:=$dfl}"
 
-  vars=$(set |grep -E '^AH_(AZS|DEFAULT_SGS|BILLING_GROUP|BILLING_PROJECT|ENV|MACHINE_IMAGE|KEY_PAIR|INSTANCE_TYPE|VPC|SUBNETS)=')
+  vars=$(set |grep -E "^AH_($(if [[ -z "$AH_SUBNETS" ]] ; then echo "AZS|" ; fi)DEFAULT_SGS|BILLING_GROUP|BILLING_PROJECT|ENV|MACHINE_IMAGE|KEY_PAIR|INSTANCE_TYPE|VPC|SUBNETS)=")
 
   echo
   echo "$vars"
@@ -157,6 +181,13 @@ done
 region=$(aws configure list |awk '$1 == "region" {print $2}')
 AZS=$(echo $AH_AZS |tr '[ ]' '[,]' |awk -vRS=, '{print}' |grep . |sed "s/^/$region/")
 
+if [[ $AH_SUBNETS ]]; then
+  if [[ $AH_PUBLIC == y ]]; then
+    more_lc_opts="--associate-public-ip-address"
+  else
+    more_lc_opts="--no-associate-public-ip-address"
+  fi
+fi
 echo -n "Creating launch configuration..."
 aws autoscaling create-launch-configuration \
     --launch-configuration-name $AH_ENV \
@@ -166,6 +197,7 @@ aws autoscaling create-launch-configuration \
     --user-data "$(cat $AH_SHR/user-data.sh |envsubst '$AH_APP:$AH_ENV:$AH_BUCKET')" \
     --instance-type $AH_INSTANCE_TYPE \
     --iam-instance-profile $(ah_instance_profile_arn ah/$AH_ENV) \
+    $more_lc_opts \
     > /dev/null
 echo done.
 
