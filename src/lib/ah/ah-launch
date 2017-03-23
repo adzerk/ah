@@ -20,15 +20,39 @@ select template in $ORGS; do
     break
   fi
 done
-
 while true; do
+
+  dfl="$AH_VPC"
+  read -p "[AH_VPC] Use VPC? (blank for none) [${AH_VPC:-$dfl}] " AH_VPC
+  export AH_VPC="${AH_VPC:=$dfl}"
+
+  if [[ $AH_VPC ]]; then
+    dfl="$AH_SUBNETS"
+    read -p "[AH_SUBNETS] Subnets for VPC? [${AH_SUBNETS:-$dfl}] " AH_SUBNETS
+    export AH_SUBNETS="${AH_SUBNETS:=$dfl}"
+  fi
+
+  if [[ ! $AH_VPC ]]; then
+    dfl="$AH_CLASSIC_LINK_VPC"
+    read -p "[AH_CLASSIC_LINK_VPC] Classic link to a VPC? (blank for none) [${AH_CLASSIC_LINK_VPC:-$dfl}]" AH_CLASSIC_LINK_VPC
+    export AH_CLASSIC_LINK_VPC="${AH_CLASSIC_LINK_VPC:=$dfl}"
+
+    if [[ $AH_CLASSIC_LINK_VPC ]]; then
+      dfl="$AH_CLASSIC_LINK_SGS"
+      read -p "[AH_CLASSIC_LINK_SGS] VPC Security Groups? [${AH_CLASSIC_LINK_SGS:-$dfl}]" AH_CLASSIC_LINK_SGS
+      export AH_CLASSIC_LINK_SGS="${AH_CLASSIC_LINK_SGS:=$dfl}"
+    fi
+  fi
+
   dfl="$AH_DEFAULT_SGS"
   read -p "[AH_DEFAULT_SGS] SGs for default ingress rules (all access)? [${AH_DEFAULT_SGS:-$dfl}] " AH_DEFAULT_SGS
   export AH_DEFAULT_SGS="${AH_DEFAULT_SGS:=$dfl}"
 
-  dfl="$AH_AZS"
-  read -p "[AH_AZS] Availability zones in which to launch instances? [${AH_AZS:-$dfl}] " AH_AZS
-  export AH_AZS="${AH_AZS:=$dfl}"
+  if [[ -z $AH_SUBNETS ]]; then
+    dfl="$AH_AZS"
+    read -p "[AH_AZS] Availability zones in which to launch instances? [${AH_AZS:-$dfl}] " AH_AZS
+    export AH_AZS="${AH_AZS:=$dfl}"
+  fi
 
   dfl="$AH_BILLING_GROUP"
   read -p "[AH_BILLING_GROUP] Billing group? [${AH_BILLING_GROUP:-$dfl}] " AH_BILLING_GROUP
@@ -54,7 +78,7 @@ while true; do
   read -p "[AH_INSTANCE_TYPE] Instance type? [${AH_INSTANCE_TYPE:-$dfl}] " AH_INSTANCE_TYPE
   export AH_INSTANCE_TYPE="${AH_INSTANCE_TYPE:=$dfl}"
 
-  vars=$(set |grep -E '^AH_(AZS|DEFAULT_SGS|BILLING_GROUP|BILLING_PROJECT|ENV|MACHINE_IMAGE|KEY_PAIR|INSTANCE_TYPE)=')
+  vars=$(set |grep -E '^AH_(AZS|DEFAULT_SGS|BILLING_GROUP|BILLING_PROJECT|ENV|MACHINE_IMAGE|KEY_PAIR|INSTANCE_TYPE|VPC|SUBNETS)=')
 
   echo
   echo "$vars"
@@ -114,9 +138,11 @@ aws iam add-role-to-instance-profile \
 echo done.
 
 echo -n "Creating SG..."
+if [[ $AH_VPC ]]; then more_opts="--vpc-id ${AH_VPC}"; fi
 aws ec2 create-security-group \
   --group-name $AH_ENV \
   --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
+  $more_opts \
   > /dev/null
 echo done.
 
@@ -125,10 +151,10 @@ for i in $(echo $AH_DEFAULT_SGS |tr '[ ]' '[,]' |awk -vRS=, '{print}' |grep .); 
   for j in tcp udp icmp; do
     if [[ $j == icmp ]]; then p=-1; else p=0-65535; fi
     aws ec2 authorize-security-group-ingress \
-      --group-name $AH_ENV \
+      --group-id $(ah_sg_id_by_name $AH_ENV) \
       --protocol $j \
       --port $p \
-      --source-group $i \
+      --source-group $i
       > /dev/null
   done
 done
@@ -140,33 +166,46 @@ while ah_not ah_check "instance profile exists" ah_instance_profile_exists $AH_E
   echo waiting
 done
 
-echo -n "Creating launch configuration..."
-aws autoscaling create-launch-configuration \
-  --launch-configuration-name $AH_ENV \
-  --image-id $AH_MACHINE_IMAGE_ID \
-  --key-name $AH_KEY_PAIR \
-  --security-groups $AH_ENV \
-  --user-data "$(cat $AH_SHR/user-data.sh |envsubst '$AH_APP:$AH_ENV:$AH_BUCKET')" \
-  --instance-type $AH_INSTANCE_TYPE \
-  --iam-instance-profile $(ah_instance_profile_arn ah/$AH_ENV) \
-  > /dev/null
-echo done.
-
 region=$(aws configure list |awk '$1 == "region" {print $2}')
 AZS=$(echo $AH_AZS |tr '[ ]' '[,]' |awk -vRS=, '{print}' |grep . |sed "s/^/$region/")
 
+echo -n "Creating launch configuration..."
+if [[ $AH_CLASSIC_LINK_VPC ]]; then
+  more_opts="--classic-link-vpc-id $AH_CLASSIC_LINK_VPC "
+  if [[ $AH_CLASSIC_LINK_SGS ]]; then
+    more_opts="$more_opts --classic-link-vpc-security-groups $AH_CLASSIC_LINK_SGS"
+  fi
+fi
+
+aws autoscaling create-launch-configuration \
+    --launch-configuration-name $AH_ENV \
+    --image-id $AH_MACHINE_IMAGE_ID \
+    --key-name $AH_KEY_PAIR \
+    --security-groups $(ah_sg_id_by_name $AH_ENV) \
+    --user-data "$(cat $AH_SHR/user-data.sh |envsubst '$AH_APP:$AH_ENV:$AH_BUCKET')" \
+    --instance-type $AH_INSTANCE_TYPE \
+    --iam-instance-profile $(ah_instance_profile_arn ah/$AH_ENV) \
+    $more_opts \
+    > /dev/null
+echo done.
+
 echo -n "Creating autoscaling group..."
+if [[ $AH_SUBNETS ]]; then
+  more_opts="--vpc-zone-identifier ${AH_SUBNETS}"
+else
+  more_opts="--availability-zones $AZS"
+fi
 aws autoscaling create-auto-scaling-group \
   --auto-scaling-group-name $AH_ENV \
   --launch-configuration-name $AH_ENV \
   --min-size 0 \
   --max-size 0 \
   --desired-capacity 0 \
-  --availability-zones $AZS \
   --tags "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=AhApplication,Value=$AH_APP" \
          "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=AhEnvironment,Value=$AH_ENV" \
          "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=Name,Value=$AH_ENV" \
          "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingGroup,Value=$AH_BILLING_GROUP" \
          "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingProject,Value=$AH_BILLING_PROJECT" \
+  $more_opts \
   > /dev/null
 echo done.
