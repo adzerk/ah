@@ -48,8 +48,13 @@ ah_policy_arn() {
 ah_s3_ls() {
   local prefix=$(echo "$1" |sed 's@//*$@@')
   local bucket=$(ah_var AH_BUCKET)
-  aws s3api list-objects --bucket $(ah_var AH_BUCKET) --prefix "$prefix" \
-    |jt Contents Key % |sed "s@^${prefix}/@@"
+
+  aws s3api list-objects \
+    --region $AH_MASTER_REGION \
+    --bucket $(ah_var AH_BUCKET) \
+    --prefix "$prefix" \
+    |jt Contents Key % \
+    |sed "s@^${prefix}/@@"
 }
 
 # Returns the ARN of the specified instance profile name.

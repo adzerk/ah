@@ -1,4 +1,4 @@
 # vim: set ft=sh:
 
-. <(aws s3 cp s3://$(ah_data $(ah_var AH_APP))/$(ah_var AH_ENV).sh -)
+. <(aws s3 cp s3://$(ah_data $(ah_var AH_APP))/$(ah_var AH_ENV).sh - --region $AH_MASTER_REGION)
 echo $AH_SHA

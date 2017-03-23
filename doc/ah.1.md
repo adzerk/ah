@@ -58,6 +58,10 @@ are attempted.
     be provided interactively from the terminal or via <stdin>. See **FILES**
     below for a description of the expected format.
 
+  * `region` [<region>]:
+    Set the default AWS region to <region> if <region> is specified, or print
+    the current default region name.
+
   * `push`:
     Push the `HEAD` of the current application git repo and the contents of
     the target directory to S3.
@@ -151,6 +155,10 @@ eval by the `bash`(1) shell.
   * <$APPDIR>`/.ah/env`:
     This file contains the name of the current default environment, as set by
     the `env` command.
+
+  * <$APPDIR>`/.ah/region`:
+    This file contains the name of the current default AWS region, as set by
+    the `region` command.
 
 ## COPYRIGHT
 

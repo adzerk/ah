@@ -1,0 +1,10 @@
+# vim: set ft=sh:
+
+if [[ -z "$1" ]]; then
+  [[ -n "$AWS_DEFAULT_REGION" ]] && echo "$AWS_DEFAULT_REGION"
+  exit 0
+fi
+
+export AWS_DEFAULT_REGION=$1
+vars=$(set |grep -E '^AWS_DEFAULT_REGION=')
+echo "$vars" > .ah/region

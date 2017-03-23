@@ -54,6 +54,10 @@ These commands operate at the application level and must be executed from an app
 Configure a new application and create associated AWS resources\. Input may be provided interactively from the terminal or via \fIstdin\fR\. See \fBFILES\fR below for a description of the expected format\.
 .
 .TP
+\fBregion\fR [\fIregion\fR]
+Set the default AWS region to \fIregion\fR if \fIregion\fR is specified, or print the current default region name\.
+.
+.TP
 \fBpush\fR
 Push the \fBHEAD\fR of the current application git repo and the contents of the target directory to S3\.
 .
@@ -139,6 +143,10 @@ This file contains the application configuration, as set by the \fBinit\fR comma
 .TP
 \fI$APPDIR\fR\fB/\.ah/env\fR
 This file contains the name of the current default environment, as set by the \fBenv\fR command\.
+.
+.TP
+\fI$APPDIR\fR\fB/\.ah/region\fR
+This file contains the name of the current default AWS region, as set by the \fBregion\fR command\.
 .
 .SH "COPYRIGHT"
 Copyright \(co 2017 Adzerk \fB<engineering@adzerk\.com>\fR, distributed under the Eclipse Public License, version 1\.0\. This is free software: you are free to change and redistribute it\. There is NO WARRANTY, to the extent permitted by law\.

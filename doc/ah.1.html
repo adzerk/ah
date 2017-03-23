@@ -125,6 +125,8 @@ are attempted.</p>
 <dt class="flush"><code>init</code></dt><dd><p>Configure a new application and create associated AWS resources. Input may
 be provided interactively from the terminal or via <var>stdin</var>. See <strong>FILES</strong>
 below for a description of the expected format.</p></dd>
+<dt><code>region</code> [<var>region</var>]</dt><dd><p>Set the default AWS region to <var>region</var> if <var>region</var> is specified, or print
+the current default region name.</p></dd>
 <dt class="flush"><code>push</code></dt><dd><p>Push the <code>HEAD</code> of the current application git repo and the contents of
 the target directory to S3.</p></dd>
 <dt class="flush"><code>shas</code></dt><dd><p>Print the list of SHAs that have been uploaded via the <code>push</code> command for
@@ -200,6 +202,8 @@ command. Settings in this file only apply to this application. This file
 <strong>must</strong> be committed to the git repository for the application.</p></dd>
 <dt><var>$APPDIR</var><code>/.ah/env</code></dt><dd><p>This file contains the name of the current default environment, as set by
 the <code>env</code> command.</p></dd>
+<dt><var>$APPDIR</var><code>/.ah/region</code></dt><dd><p>This file contains the name of the current default AWS region, as set by
+the <code>region</code> command.</p></dd>
 </dl>
 
 

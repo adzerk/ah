@@ -12,7 +12,8 @@ else
   select template in "NO TEMPLATE" $(ah_s3_ls etc |sed 's@\.conf$@@'); do
     case "$template" in
       "NO TEMPLATE") break ;;
-      *) . <(aws s3 cp s3://$AH_BUCKET/etc/${template}.conf - |grep . |sed 's@^@export @')
+      *) . <(aws s3 cp s3://$AH_BUCKET/etc/${template}.conf - --region $AH_MASTER_REGION \
+              |grep . |sed 's@^@export @')
         ;;
     esac
   done
@@ -68,5 +69,5 @@ else
 fi
 
 echo -n "Saving org settings..."
-echo "$vars" |aws s3 cp - s3://$AH_BUCKET/etc/${AH_ORG}.conf
+echo "$vars" |aws s3 cp - s3://$AH_BUCKET/etc/${AH_ORG}.conf --region $AH_MASTER_REGION
 echo done.

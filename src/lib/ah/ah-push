@@ -18,5 +18,5 @@ fi
 echo done.
 
 echo -n "Pushing repo to S3..."
-cat $tmp1 |gzip -9 |aws s3 cp - "$s3uri"
+cat $tmp1 |gzip -9 |aws s3 cp - "$s3uri" --region $AH_MASTER_REGION
 echo done.

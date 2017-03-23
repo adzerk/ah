@@ -3,6 +3,7 @@
 export AH_APP=$AH_APP
 export AH_ENV=$AH_ENV
 export AH_BUCKET=$AH_BUCKET
+export AH_MASTER_REGION=$AH_MASTER_REGION
 export AH_REGION=$(ec2metadata --availability-zone |sed 's@.$@@')
 
 # install packages
@@ -27,19 +28,16 @@ fi
 
 # install ah-client
 
-pushd /usr/local/bin
-  cat <<EOT >> ah-client
-#!/usr/bin/env bash
-
+cat <<EOT >> /etc/ah-client.conf
+export AH_MASTER_REGION=$AH_MASTER_REGION
 export AH_REGION=$AH_REGION
 export AH_BUCKET=$AH_BUCKET
 export AH_APP=$AH_APP
 export AH_ENV=$AH_ENV
-
 EOT
-  aws s3 cp s3://$AH_BUCKET/bin/ah-client2 - >> ah-client
-  chmod 755 ah-client
-popd
+
+DEFAULT_AWS_REGION=$AH_MASTER_REGION aws s3 cp s3://$AH_BUCKET/bin/ah-client2 /usr/local/bin/ah-client
+chmod 755 /usr/local/bin/ah-client
 
 # provision and deploy application on first boot
 

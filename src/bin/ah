@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Default master region (can override with `ah init`)
+export AH_MASTER_REGION=us-east-1
+
 AH=$(basename ${BASH_SOURCE[0]})
 
 # Directories where ah configuration and library files are located.
@@ -23,7 +26,8 @@ ah_die() {
 
 # Load config file and export its vars.
 ah_load_conf() {
-  local vars=$(grep -s '^AH_[A-Z][A-Z]*=' $1 |cut -d= -f1)
+  local patt=${2:-^AH_[^=\s][^=\s]*=}
+  local vars=$(grep -s "$patt" $1 |cut -d= -f1)
   [[ -n "$vars" ]] && . $1 && export $vars
 }
 
@@ -53,6 +57,11 @@ ah_load_extension() {
   export PATH="${to}:$PATH"
 }
 
+# Ensure that AWS credentials are available
+
+aws configure list |grep -E '^(access|secret)_key' |grep -q '<not set>' \
+  && ah_die "AWS credentials not available"
+
 # Load AH config script
 
 if [[ -f ${AH_CFG}/config ]]; then
@@ -64,6 +73,7 @@ fi
 
 ah_load_conf .ah/ah.conf
 ah_load_conf .ah/env
+ah_load_conf .ah/region '^AWS_DEFAULT_REGION='
 
 # Bootstrapping ###############################################################
 if [[ $# -gt 0 ]]; then

@@ -7,5 +7,7 @@ else
 fi
 
 echo -n "Setting deploy SHA..."
-echo "export AH_SHA=$sha" |aws s3 cp - s3://$(ah_data $(ah_var AH_APP))/$(ah_var AH_ENV).sh > /dev/null
+echo "export AH_SHA=$sha" \
+  |aws s3 cp - s3://$(ah_data $(ah_var AH_APP))/$(ah_var AH_ENV).sh --region $AH_MASTER_REGION \
+  > /dev/null
 echo done.

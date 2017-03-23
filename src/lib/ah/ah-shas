@@ -2,7 +2,7 @@
 
 prefix=repo/$(ah_var AH_APP)/
 
-aws s3api list-objects-v2 --bucket $(ah_var AH_BUCKET) --prefix $prefix \
+aws s3api list-objects-v2 --bucket $(ah_var AH_BUCKET) --prefix $prefix --region $AH_MASTER_REGION \
   |jt Contents [ Key % ] [ LastModified % ] \
   |sed "s@^${prefix}@@" \
   |grep '\.tar\.gz' \

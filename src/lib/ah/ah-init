@@ -8,6 +8,10 @@ else
     read -p "[AH_BUCKET] S3 bucket for ah to use? [${AH_BUCKET:-$dfl}] " AH_BUCKET
     export AH_BUCKET="${AH_BUCKET:=$dfl}"
 
+    dfl=$AH_MASTER_REGION
+    read -p "[AH_MASTER_REGION] AWS region for S3 bucket? [${AH_MASTER_REGION:-$dfl}] " AH_MASTER_REGION
+    export AH_MASTER_REGION="${AH_MASTER_REGION:=$dfl}"
+
     dfl=$(basename "$PWD")
     read -p "[AH_APP] App name? [${AH_APP:-$dfl}] " AH_APP
     export AH_APP="${AH_APP:=$dfl}"
@@ -24,7 +28,7 @@ else
     read -p "[AH_BILLING_PROJECT] Billing project? [${AH_BILLING_PROJECT:-$dfl}] " AH_BILLING_PROJECT
     export AH_BILLING_PROJECT="${AH_BILLING_PROJECT:=$dfl}"
 
-    vars=$(set |grep -E '^AH_(BUCKET|APP|TARGET|BILLING_GROUP|BILLING_PROJECT)=')
+    vars=$(set |grep -E '^AH_(BUCKET|MASTER_REGION|APP|TARGET|BILLING_GROUP|BILLING_PROJECT)=')
 
     echo
     echo "$vars"
