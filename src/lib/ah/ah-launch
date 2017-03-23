@@ -23,13 +23,25 @@ done
 while true; do
 
   dfl="$AH_VPC"
-  read -p "[AH_VPC] Use VPC (blank for none)? [${AH_VPC:-$dfl}] " AH_VPC
+  read -p "[AH_VPC] Use VPC? (blank for none) [${AH_VPC:-$dfl}] " AH_VPC
   export AH_VPC="${AH_VPC:=$dfl}"
 
   if [[ $AH_VPC ]]; then
     dfl="$AH_SUBNETS"
     read -p "[AH_SUBNETS] Subnets for VPC? [${AH_SUBNETS:-$dfl}] " AH_SUBNETS
     export AH_SUBNETS="${AH_SUBNETS:=$dfl}"
+  fi
+
+  if [[ ! $AH_VPC ]]; then
+    dfl="$AH_CLASSIC_LINK_VPC"
+    read -p "[AH_CLASSIC_LINK_VPC] Classic link to a VPC? (blank for none) [${AH_CLASSIC_LINK_VPC:-$dfl}]" AH_CLASSIC_LINK_VPC
+    export AH_CLASSIC_LINK_VPC="${AH_CLASSIC_LINK_VPC:=$dfl}"
+
+    if [[ $AH_CLASSIC_LINK_VPC ]]; then
+      dfl="$AH_CLASSIC_LINK_SGS"
+      read -p "[AH_CLASSIC_LINK_SGS] VPC Security Groups? [${AH_CLASSIC_LINK_SGS:-$dfl}]" AH_CLASSIC_LINK_SGS
+      export AH_CLASSIC_LINK_SGS="${AH_CLASSIC_LINK_SGS:=$dfl}"
+    fi
   fi
 
   dfl="$AH_DEFAULT_SGS"
@@ -158,6 +170,13 @@ region=$(aws configure list |awk '$1 == "region" {print $2}')
 AZS=$(echo $AH_AZS |tr '[ ]' '[,]' |awk -vRS=, '{print}' |grep . |sed "s/^/$region/")
 
 echo -n "Creating launch configuration..."
+if [[ $AH_CLASSIC_LINK_VPC ]]; then
+  more_opts="--classic-link-vpc-id $AH_CLASSIC_LINK_VPC "
+  if [[ $AH_CLASSIC_LINK_SGS ]]; then
+    more_opts="$more_opts --classic-link-vpc-security-groups $AH_CLASSIC_LINK_SGS"
+  fi
+fi
+
 aws autoscaling create-launch-configuration \
     --launch-configuration-name $AH_ENV \
     --image-id $AH_MACHINE_IMAGE_ID \
@@ -166,6 +185,7 @@ aws autoscaling create-launch-configuration \
     --user-data "$(cat $AH_SHR/user-data.sh |envsubst '$AH_APP:$AH_ENV:$AH_BUCKET')" \
     --instance-type $AH_INSTANCE_TYPE \
     --iam-instance-profile $(ah_instance_profile_arn ah/$AH_ENV) \
+    $more_opts \
     > /dev/null
 echo done.
 
