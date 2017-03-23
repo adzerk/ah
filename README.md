@@ -10,6 +10,7 @@ Deployment automation tool.
 1. GNU make
 1. git
 1. AWS command line tool
+1. ronn (`gem install ronn`)
 
 To install in `/usr/local` do:
 
