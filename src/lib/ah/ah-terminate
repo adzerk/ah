@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # vim: set ft=sh:
 
 read -sn 1 -p "Really terminate environment '$(ah_var AH_ENV)'? [yN] " approve
