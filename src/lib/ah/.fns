@@ -234,22 +234,30 @@ ah_tar() {
 ## interactive pickers
 ###############################################################################
 
-multiselect()
-{
-  local opts="$1"
-  prompt="Check an option (again to uncheck, ENTER when done): "
+ah_multiselect() {
+  local opts=$(echo "$2" \
+    |while read line ; do
+      echo -ne "${line}\t"
+      echo "${!1}" \
+        |tr '[ ]' '[\n]' \
+        |grep -q "^$(echo "$line" |awk '{print $1}')\$" \
+        && echo -n "yes"
+      echo
+    done
+  )
+  prompt="$3"
   while echo "$opts" \
       | cat -n \
-      | awk -F'	' '$4 == "yes" {print $1 " [*] " $2 "\t" $3} $4 != "yes" {print $1 " [ ] " $2 "\t" $3}' \
+      | sed 's@^ *@@' \
+      | sed 's@\t@)\t@' \
+      | awk -F'	' '$4 == "yes" {print $1 " [*] " $2 "\t" $3}
+                   $4 != "yes" {print $1 " [ ] " $2 "\t" $3}' \
       | column -s '	' -t \
       && read -rp "$prompt" num && [[ "$num" ]]; do
-    awkscript=$(cat <<EOT
-  \$1 == $num && \$4 == "yes" {print \$2 "\t" \$3 "\tno"}
-  \$1 == $num && \$4 == "no" {print \$2 "\t" \$3 "\tyes"}
-  \$1 != $num {print \$2 "\t" \$3 "\t" \$4}
-EOT
-             )
-    opts=$(echo "$opts" | cat -n | awk -F'	' "$awkscript")
+    opts=$(echo "$opts" |cat -n \
+      | awk -F'	' "$(printf '$1 == %d && $4 == "yes" {print $2 "\t" $3 "\t"}
+                             $1 == %d && $4 == "" {print $2 "\t" $3 "\tyes"}
+                             $1 != %d {print $2 "\t" $3 "\t" $4}' $num $num $num 2>/dev/null)")
+    eval "${1}='$(echo $(echo "$opts" |grep 'yes$' |cut -f1))'"
   done
-  echo "$opts"
 }
