@@ -190,10 +190,6 @@ echo done.
 
 AH_MACHINE_IMAGE_ID=$(echo "$IMAGES" |awk "\$2 ==\"$AH_MACHINE_IMAGE\" {print \$1}")
 
-while ah_not ah_check "instance profile exists" ah_instance_profile_exists $AH_ENV; do
-  echo waiting
-done
-
 region=$(aws configure list |awk '$1 == "region" {print $2}')
 AZS=$(echo $AH_AZS |tr '[ ]' '[,]' |awk -vRS=, '{print}' |grep . |sed "s/^/$region/")
 
@@ -209,6 +205,9 @@ if [[ $AH_CLASSIC_LINK_VPC ]]; then
   more_lc_opts="$more_lc_opts --classic-link-vpc-id $AH_CLASSIC_LINK_VPC --classic-link-vpc-security-groups $sg_id"
 fi
 
+tmp=$(mktemp)
+trap "rm -f $tmp" EXIT
+
 while true ; do
   aws autoscaling create-launch-configuration \
     --launch-configuration-name $AH_ENV \
@@ -220,9 +219,11 @@ while true ; do
     --iam-instance-profile $(ah_instance_profile_arn ah/$AH_ENV) \
     $more_lc_opts \
     > /dev/null \
+    2> "$tmp" \
     && echo done. \
     && break
   echo failed.
+  echo -n "$(cat "$tmp")"
   echo -n "Retrying..."
 done
 

@@ -8,11 +8,14 @@ export AH_REGION=$(ec2metadata --availability-zone |sed 's@.$@@')
 
 # install packages
 
-if ! (which make && which aws) > /dev/null; then
+if which apt-get > /dev/null; then
   apt-get update
   apt-get -y upgrade
-  apt-get -y install make python python-pip
-  pip install awscli
+
+  if ! (which make && which aws) > /dev/null; then
+    apt-get -y install make python python-pip
+    pip install awscli
+  fi
 fi
 
 # setup initial AWs config file
