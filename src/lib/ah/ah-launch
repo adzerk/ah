@@ -119,7 +119,7 @@ ah_check "instance profile does not already exist" ah_not ah_instance_profile_ex
 ah_check "launch configuration does not already exist" ah_not ah_launch_config_exists $AH_ENV || ah_die "aborted."
 ah_check "autoscaling group does not already exist" ah_not ah_asg_exists $AH_ENV || ah_die "aborted."
 
-EC2_ASSUME_ROLE=$(cat <<EOT
+ROLE_POLICY=$(cat <<EOT
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -135,11 +135,29 @@ EC2_ASSUME_ROLE=$(cat <<EOT
 EOT
 )
 
+ROLE_INLINE_POLICY=$(cat <<EOT
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeTags"
+      ],
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
+}
+EOT
+)
+
 echo -n "Creating role..."
 aws iam create-role \
   --path /ah/ \
   --role-name $AH_ENV \
-  --assume-role-policy-document "$EC2_ASSUME_ROLE" \
+  --assume-role-policy-document "$ROLE_POLICY" \
   > /dev/null
 echo done.
 
@@ -147,6 +165,14 @@ echo -n "Attaching app policy..."
 aws iam attach-role-policy \
   --role-name $AH_ENV \
   --policy-arn $(ah_policy_arn ah/$AH_APP) \
+  > /dev/null
+echo done.
+
+echo -n "Creating inline policy..."
+aws iam put-role-policy \
+  --role-name $AH_ENV \
+  --policy-name ec2-describe-tags \
+  --policy-document "$ROLE_INLINE_POLICY" \
   > /dev/null
 echo done.
 
@@ -224,7 +250,7 @@ while true ; do
     && break
   echo failed.
   [[ -n "$(cat "$tmp")" ]] && cat "$tmp"
-  echo -n "Retrying..."
+  echo -n "Creating launch configuration..."
 done
 
 echo -n "Creating autoscaling group..."
@@ -245,5 +271,12 @@ aws autoscaling create-auto-scaling-group \
          "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingGroup,Value=$AH_BILLING_GROUP" \
          "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingProject,Value=$AH_BILLING_PROJECT" \
   $more_opts \
+  > /dev/null
+echo done.
+
+echo -n "Enabling metrics on autoscaling group..."
+aws autoscaling enable-metrics-collection \
+  --auto-scaling-group-name $AH_ENV \
+  --granularity 1Minute \
   > /dev/null
 echo done.
