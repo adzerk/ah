@@ -223,13 +223,13 @@ while true ; do
     && echo done. \
     && break
   echo failed.
-  echo -n "$(cat "$tmp")"
+  [[ -n "$(cat "$tmp")" ]] && cat "$tmp"
   echo -n "Retrying..."
 done
 
 echo -n "Creating autoscaling group..."
 if [[ $AH_SUBNETS ]]; then
-  more_opts="--vpc-zone-identifier ${AH_SUBNETS}"
+  more_opts="--vpc-zone-identifier $(echo "${AH_SUBNETS}" |sed 's@  *@,@')"
 else
   more_opts="--availability-zones ${AZS}"
 fi
