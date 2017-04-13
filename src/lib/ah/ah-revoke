@@ -2,7 +2,6 @@
 
 [[ $# -lt 1 ]] && ah_die "secret name required"
 
-secret=$1
 policy_name="${1}=$(ah_var AH_ENV)"
 policy_arn=$(ah_policy_arn ah/secrets/$policy_name)
 

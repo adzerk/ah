@@ -2,6 +2,8 @@
 
 SHELL  := /bin/bash
 PREFIX ?= /usr/local
+AWS_USERS_GUIDE := "http://docs.aws.amazon.com/IAM/latest/UserGuide"
+AWS_SPOT_HIST   := "http://docs.aws.amazon.com/cli/latest/reference/ec2/describe-spot-price-history.html"
 
 export PREFIX
 
@@ -18,6 +20,41 @@ uninstall:
 	rm -rf $(PREFIX)/{bin,etc,lib,share}/ah
 	rm -f $(PREFIX)/man/man1/ah.1
 	rm -f $(PREFIX)/man/man1/ah-client.1
+
+src/lib/ah/aws-actions.txt:
+	curl -s $(AWS_USERS_GUIDE)/reference_policies_actionsconditions.html \
+		|hxnormalize -x \
+		|hxselect .highlights ul li a \
+		|grep -o '"list_[^"]*"' \
+		|tr -d '"' \
+		|while read a; do \
+			curl -s $(AWS_USERS_GUIDE)/$$a \
+				|hxnormalize -x \
+				|hxselect -cs '\n' ul.itemizedlist li p code a \
+				|tr '[:]' '[\t]'; \
+		done > $@
+
+src/lib/ah/aws-conditions-context-keys.txt:
+	curl -s $(AWS_USERS_GUIDE)/reference_policies_actionsconditions.html \
+		|hxnormalize -x \
+		|hxselect .highlights ul li a \
+		|grep -o '"list_[^"]*"' \
+		|tr -d '"' \
+		|while read a; do \
+			curl -s $(AWS_USERS_GUIDE)/$$a \
+				|hxnormalize -x \
+				|hxselect -cs '\n' ul.itemizedlist li p code \
+				|grep -v '^<' \
+				|tr '[:]' '[\t]'; \
+		done > $@
+
+src/lib/ah/instance-types.txt:
+	curl -s $(AWS_SPOT_HIST) \
+		|hxnormalize -x \
+		|hxselect -cs '\n' '#options.section' .highlight-python pre \
+		|grep '^  *[a-z]' \
+		|awk '{print $1}' \
+		> $@
 
 tools: tools/json-table.tar.gz
 

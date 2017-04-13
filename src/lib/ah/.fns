@@ -1,5 +1,24 @@
 #!/bin/bash
 
+## colors
+###############################################################################
+
+ah_bold()    { echo -e "\033[1m$1\033[0m"; }
+ah_red()     { echo -e "\033[31m$1\033[0m"; }
+ah_green()   { echo -e "\033[32m$1\033[0m"; }
+ah_yellow()  { echo -e "\033[33m$1\033[0m"; }
+ah_blue()    { echo -e "\033[34m$1\033[0m"; }
+
+## logging
+###############################################################################
+
+ah_info()    { ah_bold "$1"; }
+ah_notice()  { ah_bold "$(ah_blue "$1")"; }
+ah_warning() { ah_bold "$(ah_yellow "$1")"; }
+ah_error()   { ah_bold "$(ah_red "$1")"; }
+ah_success() { ah_bold "$(ah_green "$1")"; }
+ah_clearln() { printf "\r\033[K"; }
+
 ## helpers
 ###############################################################################
 
@@ -74,11 +93,11 @@ ah_check() {
   local what=$1
   local abort=no
   shift
-  echo -n "Checking ${what}..."
+  echo -n "$(ah_info "Checking ${what}...")"
   if "$@" > /dev/null 2>&1; then
-    echo "[PASS]"
+    ah_success "[PASS]"
   else
-    echo "[FAIL]"
+    ah_error "[FAIL]"
     abort=yes
   fi
 
@@ -136,6 +155,16 @@ ah_sg_id_by_name() {
   local name=$1
   aws ec2 describe-security-groups --no-paginate --filters "Name=group-name,Values=$1" \
     | jt SecurityGroups GroupId %
+}
+
+ah_sg_info() {
+  local name=$1
+  aws ec2 describe-security-groups --no-paginate --filters "Name=group-name,Values=$name"
+}
+
+ah_sg_vpc() {
+  local info=$1
+  echo "$info" |jt SecurityGroups [ VpcId % ]
 }
 
 ## roles
@@ -199,6 +228,47 @@ ah_launch_config_exists() {
     |grep -q "^${name}\$"
 }
 
+ah_launch_config_info() {
+  local name=$1
+  aws autoscaling describe-launch-configurations \
+    --launch-configuration-names $name
+}
+
+ah_launch_config_image_id() {
+  local info=$1
+  echo "$info" |jt LaunchConfigurations [ ImageId % ]
+}
+
+ah_launch_config_key_name() {
+  local info=$1
+  echo "$info" |jt LaunchConfigurations [ KeyName % ]
+}
+
+ah_launch_config_security_groups() {
+  local info=$1
+  echo "$info" |jt LaunchConfigurations [ SecurityGroups % ]
+}
+
+ah_launch_config_classic_link_vpc_id() {
+  local info=$1
+  echo "$info" |jt LaunchConfigurations [ ClassicLinkVPCId % ]
+}
+
+ah_launch_config_classic_link_security_groups() {
+  local info=$1
+  echo "$info" |jt LaunchConfigurations [ ClassicLinkSecurityGroups % ]
+}
+
+ah_launch_config_associate_public_ip() {
+  local info=$1
+  echo "$info" |jt LaunchConfigurations [ AssociatePublicIpAddress % ]
+}
+
+ah_launch_config_instance_type() {
+  local info=$1
+  echo "$info" |jt LaunchConfigurations [ InstanceType % ]
+}
+
 ## autoscaling groups
 ###############################################################################
 
@@ -208,6 +278,27 @@ ah_asg_exists() {
     --auto-scaling-group-names $name \
     |jt AutoScalingGroups [ AutoScalingGroupName % ] \
     |grep -q "^${name}\$"
+}
+
+ah_asg_info() {
+  local name=$1
+  aws autoscaling describe-auto-scaling-groups \
+    --auto-scaling-group-names $name
+}
+
+ah_asg_launch_config_name() {
+  local info=$1
+  echo "$info" |jt AutoScalingGroups [ LaunchConfigurationName % ]
+}
+
+ah_asg_vpc_subnets() {
+  local info=$1
+  echo "$info" |jt AutoScalingGroups [ VPCZoneIdentifier % ] |tr '[,]' '[ ]'
+}
+
+ah_asg_azs() {
+  local info=$1
+  echo $(echo "$info" |jt AutoScalingGroups [ AvailabilityZones % ])
 }
 
 ## cross-platform utility fns
@@ -234,10 +325,23 @@ ah_tar() {
 ## interactive pickers
 ###############################################################################
 
-ah_multiselect() {
-  local opts=$(echo "$2" \
+ah_select() {
+  local OPTIND OPTARG o num prompt="Choose: " opts multi showval='$2 "\t"'
+
+  while getopts ":mp:v" o; do
+    case $o in
+      m) multi='$4' ;;
+      p) prompt=$OPTARG ;;
+      v) showval= ;;
+    esac
+  done
+  shift $((OPTIND-1))
+
+  prompt=$(ah_bold "${prompt:-Choose: }")
+
+  opts=$(echo "$2" \
     |while read line ; do
-      echo -ne "${line}\t"
+      echo -n "$(echo "$line" |awk -F'	' '{print $1 "\t" $2 "\t"}')"
       echo "${!1}" \
         |tr '[ ]' '[\n]' \
         |grep -q "^$(echo "$line" |awk '{print $1}')\$" \
@@ -245,19 +349,46 @@ ah_multiselect() {
       echo
     done
   )
-  prompt="$3"
-  while echo "$opts" \
-      | cat -n \
-      | sed 's@^ *@@' \
-      | sed 's@\t@)\t@' \
-      | awk -F'	' '$4 == "yes" {print $1 " [*] " $2 "\t" $3}
-                   $4 != "yes" {print $1 " [ ] " $2 "\t" $3}' \
-      | column -s '	' -t \
-      && read -rp "$prompt" num && [[ "$num" ]]; do
+
+  echo "$opts" \
+    | cat -n \
+    | sed 's@^ *@@' \
+    | sed 's@\t@)\t@' \
+    | awk -F'	' "$(printf '$4 == "yes" {print $1 " ☑ " %s $3}
+                           $4 != "yes" {print $1 " ☐ " %s $3}' "$showval" "$showval")" \
+    | column -s '	' -t \
+    | rs
+
+  read -rp "$prompt" num
+
+  if [[ -n "$num" ]]; then
     opts=$(echo "$opts" |cat -n \
       | awk -F'	' "$(printf '$1 == %d && $4 == "yes" {print $2 "\t" $3 "\t"}
                              $1 == %d && $4 == "" {print $2 "\t" $3 "\tyes"}
-                             $1 != %d {print $2 "\t" $3 "\t" $4}' $num $num $num 2>/dev/null)")
+                             $1 != %d {print $2 "\t" $3 "\t" %s}' $num $num $num $multi 2>/dev/null)")
+
     eval "${1}='$(echo $(echo "$opts" |grep 'yes$' |cut -f1))'"
+    true
+  else
+    false
+  fi
+}
+
+ah_text_input() {
+  local OPTIND OPTARG tmp prompt="Value: "
+
+  while getopts ":p:" o; do
+    case $o in
+      p) prompt=$OPTARG ;;
+    esac
   done
+  shift $((OPTIND-1))
+
+  tmp=${!1}
+
+  echo -n "$(ah_bold "${prompt}[")${tmp}$(ah_bold "]") "
+  read -r tmp
+  [[ -z "$tmp" ]] && tmp=${!1}
+
+  eval "${1}=$(printf '%q' "$tmp")"
 }

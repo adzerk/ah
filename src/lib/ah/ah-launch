@@ -1,125 +1,6 @@
 #!/usr/bin/env bash
 
-OLD_IFS="$IFS"
-
-echo -n "Loading options..."
-AZS=$(aws ec2 describe-availability-zones |jt AvailabilityZones [ ZoneName % ])
-IFS=$'\n'
-VPCS=($(IFS="$OLD_IFS" aws ec2 describe-vpcs |jt Vpcs [ VpcId % ] [ Tags [ Key % ] [ Value % ] ] |sort |awk -F '	' '$2 == "Name" {print $1 "|" $3}'))
-SUBNETS=$(IFS="$OLD_IFS" aws ec2 describe-subnets |jt Subnets [ VpcId % ] [ SubnetId % ] [ AvailabilityZone % ] |sort)
-IFS="$OLD_IFS"
-IMAGES=$(aws ec2 describe-images --owners $(ah_account_id) |jt Images [ ImageId % ] [ Name % ])
-KEYS=$(aws ec2 describe-key-pairs --no-paginate |jt KeyPairs [ KeyName % ])
-ORGS=$(ah_s3_ls etc |sed 's@\.conf$@@')
-associate_public_ips=n
-echo "done."
-
-dfl="$template"
-PS3="Org to use as a template? [${template:-$dfl}] "
-select template in $ORGS; do
-  if [[ -n "$template" || -n "$dfl" ]]; then
-    export template="${template:=$dfl}"
-    . <(aws s3 cp s3://$(ah_var AH_BUCKET)/etc/${template}.conf - \
-        --region $AH_MASTER_REGION \
-        |grep . |sed 's@^@export @')
-    break
-  fi
-done
-
-while true; do
-  dfl="$AH_VPC"
-  PS3="[AH_VPC] Launch into VPC? [${AH_VPC:-$dfl}] "
-  select AH_VPC in "NO VPC" "${VPCS[@]}"; do
-    if [[ $AH_VPC ]]; then
-      case "$AH_VPC" in
-        "NO VPC") AH_VPC="" ; break ;;
-        *) AH_VPC="$(echo "${AH_VPC:=$dfl}" |sed 's@|.*$@@')" ; break ;;
-      esac
-    elif [[ -n $dfl ]]; then
-      AH_VPC=$dfl
-      break
-    fi
-  done
-  export AH_VPC
-
-  if [[ ! $AH_VPC ]]; then
-    dfl="$AH_CLASSIC_LINK_VPC"
-    PS3="[AH_CLASSIC_LINK_VPC] Enable classic link to VPC? [${AH_CLASSIC_LINK_VPC:-$dfl}] "
-    select AH_CLASSIC_LINK_VPC in "NO VPC" "${VPCS[@]}"; do
-      if [[ $AH_CLASSIC_LINK_VPC ]]; then
-        case "$AH_CLASSIC_LINK_VPC" in
-          "NO VPC") AH_CLASSIC_LINK_VPC="" ; break ;;
-          *) AH_CLASSIC_LINK_VPC="$(echo "${AH_CLASSIC_LINK_VPC:=$dfl}" |sed 's@|.*$@@')" ; break ;;
-        esac
-      elif [[ -n $dfl ]]; then
-        AH_CLASSIC_LINK_VPC=$dfl
-        break
-      fi
-    done
-    export AH_CLASSIC_LINK_VPC
-
-    dfl="$AH_AZS"
-    ah_multiselect AH_AZS "$AZS" "[AH_AZS] Availability zones in which to launch instances (ENTER when done): "
-    export AH_AZS="${AH_AZS:=$dfl}"
-  else
-    sn=$(echo "$SUBNETS" |awk "\$1 == \"$AH_VPC\" {print \$2 \"\t\" \$3}")
-    dfl="$AH_SUBNETS"
-    ah_multiselect AH_SUBNETS "$sn" "[AH_SUBNETS] Subnets for VPC (ENTER when done): "
-    export AH_SUBNETS="${AH_SUBNETS:=$dfl}"
-
-    dfl="$associate_public_ips"
-    read -p "[AH_PUBLIC] Assign public IPs to instances (y/n)? [${AH_PUBLIC:-$dfl}] " AH_PUBLIC
-    export AH_PUBLIC="${AH_PUBLIC:=$dfl}"
-  fi
-
-  dfl="$AH_BILLING_GROUP"
-  read -p "[AH_BILLING_GROUP] Billing group? [${AH_BILLING_GROUP:-$dfl}] " AH_BILLING_GROUP
-  export AH_BILLING_GROUP="${AH_BILLING_GROUP:=$dfl}"
-
-  dfl="$AH_BILLING_PROJECT"
-  read -p "[AH_BILLING_PROJECT] Billing project? [${AH_BILLING_PROJECT:-$dfl}] " AH_BILLING_PROJECT
-  export AH_BILLING_PROJECT="${AH_BILLING_PROJECT:=$dfl}"
-
-  dfl="$AH_MACHINE_IMAGE"
-  PS3="[AH_MACHINE_IMAGE] Machine image? [${AH_MACHINE_IMAGE:-$dfl}] "
-  select AH_MACHINE_IMAGE in $(echo "$IMAGES" |cut -f2 |sort); do
-    [[ -n "${AH_MACHINE_IMAGE:-$dfl}" ]] && break
-  done
-  export AH_MACHINE_IMAGE="${AH_MACHINE_IMAGE:=$dfl}"
-
-  dfl="$AH_KEY_PAIR"
-  PS3="[AH_KEY_PAIR] Key pair? [${AH_KEY_PAIR:-$dfl}] "
-  select AH_KEY_PAIR in $(echo "$KEYS" |sort); do
-    [[ -n "${AH_KEY_PAIR:-$dfl}" ]] && break
-  done
-  export AH_KEY_PAIR="${AH_KEY_PAIR:=$dfl}"
-
-  dfl="m3.medium"
-  read -p "[AH_INSTANCE_TYPE] Instance type? [${AH_INSTANCE_TYPE:-$dfl}] " AH_INSTANCE_TYPE
-  export AH_INSTANCE_TYPE="${AH_INSTANCE_TYPE:=$dfl}"
-
-  vars=$(set |grep -E "^AH_($(if [[ -z "$AH_SUBNETS" ]] ; then echo "AZS|" ; fi)|BILLING_GROUP|BILLING_PROJECT|ENV|MACHINE_IMAGE|KEY_PAIR|INSTANCE_TYPE|VPC|SUBNETS|CLASSIC_LINK_VPC)=")
-
-  echo
-  echo "$vars"
-  echo
-
-  read -sn 1 -p "Approve? [yN] " approve
-  [[ "$approve" == "y" ]] && echo && break;
-
-  echo
-  echo "Okay, starting over (ctrl-c to abort)."
-  echo
-done
-
-ah_check "app policy exists" ah_policy_exists || ah_die "aborted."
-ah_check "SG does not already exist" ah_not ah_sg_exists $(ah_var AH_ENV) || ah_die "aborted."
-ah_check "role does not already exist" ah_not ah_role_exists $AH_ENV || ah_die "aborted."
-ah_check "instance profile does not already exist" ah_not ah_instance_profile_exists $AH_ENV || ah_die "aborted."
-ah_check "launch configuration does not already exist" ah_not ah_launch_config_exists $AH_ENV || ah_die "aborted."
-ah_check "autoscaling group does not already exist" ah_not ah_asg_exists $AH_ENV || ah_die "aborted."
-
-ROLE_POLICY=$(cat <<EOT
+role_policy_json=$(cat <<EOT
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -135,7 +16,7 @@ ROLE_POLICY=$(cat <<EOT
 EOT
 )
 
-ROLE_INLINE_POLICY=$(cat <<EOT
+role_policy_inline_json=$(cat <<EOT
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -153,11 +34,169 @@ ROLE_INLINE_POLICY=$(cat <<EOT
 EOT
 )
 
+echo -n "$(ah_info "Loading AWS configuration info...")"
+
+avail_azs=$(aws ec2 describe-availability-zones \
+  |jt AvailabilityZones [ ZoneName % ])
+
+avail_vpcs=$(aws ec2 describe-vpcs \
+  |jt Vpcs [ VpcId % ] [ Tags [ Key % ] [ Value % ] ] \
+  |sort \
+  |awk -F' ' '$2 == "Name" {print $1 "\t" $3}')
+
+avail_subnets=$(aws ec2 describe-subnets \
+  |jt Subnets [ VpcId % ] [ SubnetId % ] [ AvailabilityZone % ] [ CidrBlock % ] \
+  |awk -F'	' '{print $1 "\t" $2 "\t" $3 " " $4}' \
+  |sort -k3)
+
+avail_images=$(aws ec2 describe-images --owners $(ah_account_id) \
+  |jt Images [ ImageId % ] [ Name % ] \
+  |sort -k2)
+
+avail_instance_types=$(cat "${AH_LIB}/instance-types.txt")
+
+avail_keys=$(aws ec2 describe-key-pairs --no-paginate \
+  |jt KeyPairs [ KeyName % ])
+
+avail_orgs=$(ah_s3_ls etc |sed 's@\.conf$@@')
+
+ah_success OK.
+
+asg_info=$(ah_asg_info $AH_ENV)
+
+echo -n "$(ah_info "Checking autoscaling group exists...")"
+
+if [[ -n "$(ah_asg_launch_config_name "$asg_info")" ]]; then
+  ah_success "[PASS]"
+  update=true
+
+  ah_check "app policy exists" ah_policy_exists || ah_die "aborted."
+  ah_check "SG exists" ah_sg_exists $AH_ENV || ah_die "aborted."
+  ah_check "role exists" ah_role_exists $AH_ENV || ah_die "aborted."
+  ah_check "instance profile exists" ah_instance_profile_exists $AH_ENV || ah_die "aborted."
+  ah_check "launch configuration exists" ah_launch_config_exists $AH_ENV || ah_die "aborted."
+
+  AH_ASG_NAME=$AH_ENV
+  AH_ASG_LAUNCH_CONFIG_NAME=$(ah_asg_launch_config_name "$asg_info")
+  AH_ASG_VPC_SUBNETS=$(ah_asg_vpc_subnets "$asg_info")
+  AH_ASG_AZS=$(ah_asg_azs "$asg_info")
+  AH_ASG_SAVED=$(set |grep '^AH_ASG_')
+
+  sg_info=$(ah_sg_info $AH_ENV)
+
+  AH_SG_VPC=$(ah_sg_vpc "$sg_info")
+
+  lc_info=$(ah_launch_config_info $AH_ASG_LAUNCH_CONFIG_NAME)
+
+  AH_LC_NAME=$AH_ASG_LAUNCH_CONFIG_NAME
+  AH_LC_IMAGE_ID=$(ah_launch_config_image_id "$lc_info")
+  AH_LC_KEY_NAME=$(ah_launch_config_key_name "$lc_info")
+  AH_LC_SECURITY_GROUPS=$(ah_sg_id_by_name $AH_ENV)
+  AH_LC_INSTANCE_TYPE=$(ah_launch_config_instance_type "$lc_info")
+  AH_LC_ASSOCIATE_PUBLIC_IP=$(ah_launch_config_associate_public_ip "$lc_info")
+  AH_LC_CLASSIC_LINK_VPC=$(ah_launch_config_classic_link_vpc_id "$lc_info")
+  AH_LC_CLASSIC_LINK_SGS=$(ah_launch_config_classic_link_security_groups "$lc_info")
+  AH_LC_SAVED=$(set |grep '^AH_LC_')
+else
+  ah_success "[FAIL]"
+  update=false
+
+  ah_check "app policy exists" ah_policy_exists || ah_die "aborted."
+  ah_check "SG does not already exist" ah_not ah_sg_exists $(ah_var AH_ENV) || ah_die "aborted."
+  ah_check "role does not already exist" ah_not ah_role_exists $AH_ENV || ah_die "aborted."
+  ah_check "instance profile does not already exist" ah_not ah_instance_profile_exists $AH_ENV || ah_die "aborted."
+  ah_check "launch configuration does not already exist" ah_not ah_launch_config_exists $AH_ENV || ah_die "aborted."
+fi
+
+if ! $update; then
+  while ah_select -p "Org to use as a template? " template "$avail_orgs"; do
+    [[ $template ]] && break
+  done
+  if [[ -n "$template" ]]; then
+    . <(aws s3 cp s3://$(ah_var AH_BUCKET)/etc/${template}.conf - \
+        --region $AH_MASTER_REGION \
+        |grep . |sed 's@^@export @')
+  fi
+fi
+
+while true; do
+  if ! $update; then
+    while ah_select -p "Launch into VPC? " AH_SG_VPC "$avail_vpcs"; do
+      [[ $AH_SG_VPC ]] && break
+    done
+  fi
+  export AH_SG_VPC
+
+  if [[ ! $AH_SG_VPC ]]; then
+    while ah_select -p "Enable classic link to VPC? " AH_LC_CLASSIC_LINK_VPC "$avail_vpcs"; do
+      [[ $AH_LC_CLASSIC_LINK_VPC ]] && break
+    done
+    export AH_CLASSIC_LINK_VPC
+
+    while true; do
+      ah_select -mp "Availability zones to launch instances in? " AH_ASG_AZS "$avail_azs" \
+        || [[ -z "$AH_ASG_AZS" ]] \
+        || break
+    done
+    export AH_AZS
+  else
+    sn=$(echo "$avail_subnets" |awk -F'	' -vVPC=$AH_SG_VPC '$1 == VPC {print $2 "\t" $3}')
+    [[ ! $sn ]] && ah_warning "VPC contains no subnets" && continue
+    while true; do
+      ah_select -mp "Subnets for VPC? " AH_ASG_VPC_SUBNETS "$sn" \
+        || [[ -z "$AH_ASG_VPC_SUBNETS" ]] \
+        || break
+    done
+    export AH_ASG_VPC_SUBNETS
+
+    AH_LC_ASSOCIATE_PUBLIC_IP=${AH_LC_ASSOCIATE_PUBLIC_IP:=yes}
+    while ah_select -v AH_LC_ASSOCIATE_PUBLIC_IP "yes	assign public IPs to instances"; do
+      :
+    done
+    export AH_LC_ASSOCIATE_PUBLIC_IP
+  fi
+
+  if ! $update; then
+    ah_text_input -p "Billing group? " AH_BILLING_GROUP
+    ah_text_input -p "Billing project? " AH_BILLING_PROJECT
+  fi
+  export AH_BILLING_GROUP AH_BILLING_PROJECT
+
+  while ah_select -p "Machine image? " AH_LC_IMAGE_ID "$avail_images"; do
+    [[ "$AH_LC_IMAGE_ID" ]] && break
+  done
+  export AH_LC_IMAGE_ID
+
+  while ah_select -p "SSH key pair to use? " AH_LC_KEY_NAME "$avail_keys"; do
+    [[ "$AH_LC_KEY_NAME" ]] && break
+  done
+  export AH_LC_KEY_NAME
+
+  while ah_select -p "Instance type? " AH_LC_INSTANCE_TYPE "$avail_instance_types"; do
+    [[ "$AH_LC_INSTANCE_TYPE" ]] && break
+  done
+  export AH_LC_INSTANCE_TYPE
+
+  set |grep ^AH_ |sort
+  vars=$(set |grep -E "^AH_($(if [[ -z "$AH_ASG_VPC_SUBNETS" ]] ; then echo "AZS|" ; fi)|BILLING_GROUP|BILLING_PROJECT|ENV|MACHINE_IMAGE|KEY_PAIR|INSTANCE_TYPE|VPC|SUBNETS|CLASSIC_LINK_VPC)=")
+
+  echo
+  echo "$vars"
+  echo
+
+  read -sn 1 -p "Approve? [yN] " approve
+  [[ "$approve" == "y" ]] && echo && break;
+
+  echo
+  echo "Okay, starting over (ctrl-c to abort)."
+  echo
+done
+
 echo -n "Creating role..."
 aws iam create-role \
   --path /ah/ \
   --role-name $AH_ENV \
-  --assume-role-policy-document "$ROLE_POLICY" \
+  --assume-role-policy-document "$role_policy_json" \
   > /dev/null
 echo done.
 
@@ -172,7 +211,7 @@ echo -n "Creating inline policy..."
 aws iam put-role-policy \
   --role-name $AH_ENV \
   --policy-name ec2-describe-tags \
-  --policy-document "$ROLE_INLINE_POLICY" \
+  --policy-document "$role_policy_inline_json" \
   > /dev/null
 echo done.
 
@@ -214,10 +253,7 @@ sg_id=$(aws ec2 create-security-group \
 [[ ! $sg_id ]] && ah_die "could not create security group"
 echo done.
 
-AH_MACHINE_IMAGE_ID=$(echo "$IMAGES" |awk "\$2 ==\"$AH_MACHINE_IMAGE\" {print \$1}")
-
-region=$(aws configure list |awk '$1 == "region" {print $2}')
-AZS=$(echo $AH_AZS |tr '[ ]' '[,]' |awk -vRS=, '{print}' |grep . |sed "s/^/$region/")
+AH_MACHINE_IMAGE_ID=$(echo "$avail_images" |awk "\$2 ==\"$AH_MACHINE_IMAGE\" {print \$1}")
 
 echo -n "Creating launch configuration..."
 if [[ $AH_VPC ]]; then
@@ -257,7 +293,7 @@ echo -n "Creating autoscaling group..."
 if [[ $AH_SUBNETS ]]; then
   more_opts="--vpc-zone-identifier $(echo "${AH_SUBNETS}" |sed 's@  *@,@')"
 else
-  more_opts="--availability-zones ${AZS}"
+  more_opts="--availability-zones ${AH_AZS}"
 fi
 aws autoscaling create-auto-scaling-group \
   --auto-scaling-group-name $AH_ENV \
