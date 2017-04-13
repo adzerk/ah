@@ -25,19 +25,18 @@ S3_READONLY=$(cat <<EOT
 EOT
 )
 
-echo -n "Creating S3 access policy..."
-aws iam create-policy \
-  --path /ah/secrets/ \
-  --policy-name $policy_name \
-  --description "Ah instance access to S3 secret." \
-  --policy-document "$S3_READONLY" \
-  > /dev/null
-echo done.
+ah_try -m "Creating S3 access policy..." \
+  aws iam create-policy \
+    --path /ah/secrets/ \
+    --policy-name $policy_name \
+    --description "Ah instance access to S3 secret." \
+    --policy-document "$S3_READONLY" \
+    > /dev/null
 
-echo -n "Attaching policy to environment role..."
-aws iam attach-role-policy \
-  --role-name $(ah_var AH_ENV) \
-  --policy-arn $(ah_policy_arn ah/secrets/$policy_name) \
-  > /dev/null
-echo done.
+ah_try -m "Attaching policy to environment role..." \
+  aws iam attach-role-policy \
+    --role-name $(ah_var AH_ENV) \
+    --policy-arn $(ah_policy_arn ah/secrets/$policy_name) \
+    > /dev/null
 
+ah_try -m "Updating grants index..." ah_update_grants_index

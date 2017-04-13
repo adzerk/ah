@@ -8,6 +8,7 @@
 appdir=/opt/$AH_APP
 appgit=s3://$AH_BUCKET/repo/$AH_APP
 appenv=s3://$AH_BUCKET/data/$AH_APP/${AH_ENV}.env
+appidx=s3://$AH_BUCKET/data/$AH_APP/${AH_ENV}.grants
 appsha=s3://$AH_BUCKET/data/$AH_APP/${AH_ENV}.sh
 s3cret=s3://$AH_BUCKET/secrets
 
@@ -37,14 +38,22 @@ info() { echo -e "\033[1m$1\033[0m" 1>&2; }
 warn() { echo -e "\033[33m$1\033[0m" 1>&2; }
 
 update_vars() {
+  local idx
   info "Fetching env vars..."
   mkdir -p .ah
-  AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 ls ${s3cret}/ \
-    |awk '{print $NF}' \
-    | while read key; do
-      val=$(AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp ${s3cret}/$key - 2>/dev/null) || continue ; \
-      echo "${key##*/}=$val" ; \
+  idx=$(AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp $appidx -)
+  if [[ -n "$idx" ]]; then
+    for i in $idx; do
+      echo "${i}=$(AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp ${s3cret}/$i - 2>/dev/null)"
     done > .ah/ah.env
+  else
+    AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 ls ${s3cret}/ \
+      |awk '{print $NF}' \
+      | while read key; do
+        val=$(AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp ${s3cret}/$key - 2>/dev/null) || continue ; \
+        echo "${key##*/}=$val" ; \
+      done > .ah/ah.env
+  fi
   AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp $appenv - 2>/dev/null >> .ah/ah.env
 }
 

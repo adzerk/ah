@@ -3,21 +3,21 @@
 ## colors
 ###############################################################################
 
-ah_bold()    { echo -e "\033[1m$1\033[0m"; }
-ah_red()     { echo -e "\033[31m$1\033[0m"; }
-ah_green()   { echo -e "\033[32m$1\033[0m"; }
-ah_yellow()  { echo -e "\033[33m$1\033[0m"; }
-ah_blue()    { echo -e "\033[34m$1\033[0m"; }
+ah_bold()    { echo -ne "\033[1m$1\033[0m"; }
+ah_red()     { echo -ne "\033[31m$1\033[0m"; }
+ah_green()   { echo -ne "\033[32m$1\033[0m"; }
+ah_yellow()  { echo -ne "\033[33m$1\033[0m"; }
+ah_blue()    { echo -ne "\033[34m$1\033[0m"; }
 
 ## logging
 ###############################################################################
 
-ah_info()    { ah_bold "$1"; }
-ah_notice()  { ah_bold "$(ah_blue "$1")"; }
-ah_warning() { ah_bold "$(ah_yellow "$1")"; }
-ah_error()   { ah_bold "$(ah_red "$1")"; }
-ah_success() { ah_bold "$(ah_green "$1")"; }
-ah_clearln() { printf "\r\033[K"; }
+ah_info()    { ah_bold "$1" 1>&2 ; }
+ah_notice()  { ah_bold "$(ah_blue "$1")" 1>&2 ; }
+ah_warning() { ah_bold "$(ah_yellow "$1")" 1>&2 ; }
+ah_error()   { ah_bold "$(ah_red "$1")" 1>&2 ; }
+ah_success() { ah_bold "$(ah_green "$1")" 1>&2 ; }
+ah_clearln() { printf "\r\033[K" 1>&2 ; }
 
 ## helpers
 ###############################################################################
@@ -26,13 +26,39 @@ ah_var() {
   local val=${!1}
   if [[ -z "$val" ]]; then
     case "$1" in
-      AH_BUCKET)  ah_die "AH_BUCKET environment variable not set" ;;
-      AH_APP)     ah_die "AH_APP not set: do '$AH init'" ;;
-      AH_TARGET)  ah_die "AH_TARGET not set: do '$AH init'" ;;
-      AH_ENV)     ah_die "AH_ENV not set: do '$AH env <name>'" ;;
+      AH_BUCKET|AH_APP|AH_TARGET|AH_MASTER_REGION|AH_BILLING_GROUP|AH_BILLING_PROJECT)
+        ah_die "$1 not set: do '$AH init'" ;;
+      AH_ENV)
+        ah_die "$1 not set: do '$AH env <name>'" ;;
     esac
   fi
   echo "$val"
+}
+
+ah_try() {
+  local OPTIND OPTARG ret err tmp=$(mktemp) msg="Working..." force=false
+
+  while getopts ":fm:" o; do
+    case $o in
+      f) force=true ;;
+      m) msg=$OPTARG ;;
+    esac
+  done
+  shift $((OPTIND-1))
+
+  ah_info "$msg"
+  "$@" 2> $tmp
+  ret=$?
+  err=$(cat $tmp)
+  rm -f $tmp
+  [[ $ret -eq 0 ]] \
+    && ah_success "done.\n" \
+    || { ah_error "failed.\n"; if $force; then echo "$err" 1>&2; else ah_die "$err"; fi; }
+  return $ret
+}
+
+ah_retry() {
+  until ah_try -f "$@"; do sleep .25; done
 }
 
 # Returns the S3 location of the git repo for this app.
@@ -95,9 +121,9 @@ ah_check() {
   shift
   echo -n "$(ah_info "Checking ${what}...")"
   if "$@" > /dev/null 2>&1; then
-    ah_success "[PASS]"
+    ah_success "[PASS]\n"
   else
-    ah_error "[FAIL]"
+    ah_error "[FAIL]\n"
     abort=yes
   fi
 
@@ -205,6 +231,28 @@ ah_detach_all_role_policies() {
     # TODO (maybe): If the policy isn't attached to any other roles, prompt the
     # user to delete it.
   done
+}
+
+## grants
+###############################################################################
+
+ah_all_grants() {
+  aws iam list-policies \
+    |jt Policies [ Path % ] [ PolicyName % ] \
+    |awk '$1 == "/ah/secrets/" {print $2}' \
+    |awk -F= '{print $1 "\t" $2}' \
+    |sort
+}
+
+ah_grants() {
+  local env=$1
+  ah_all_grants |awk -F'	' -vENV=$1 '$2 == ENV {print $1}'
+}
+
+ah_update_grants_index() {
+  ah_grants $(ah_var AH_ENV) \
+    |aws s3 cp - "s3://$(ah_data)/$(ah_var AH_APP)/$(ah_var AH_ENV).grants" \
+      --region $(ah_var AH_MASTER_REGION)
 }
 
 ## instance profiles
@@ -354,8 +402,8 @@ ah_select() {
     | cat -n \
     | sed 's@^ *@@' \
     | sed 's@\t@)\t@' \
-    | awk -F'	' "$(printf '$4 == "yes" {print $1 " ☑ " %s $3}
-                           $4 != "yes" {print $1 " ☐ " %s $3}' "$showval" "$showval")" \
+    | awk -F'	' "$(printf '$4 == "yes" {print $1 "\t■ " %s $3}
+                           $4 != "yes" {print $1 "\t□ " %s $3}' "$showval" "$showval")" \
     | column -s '	' -t \
     | rs
 

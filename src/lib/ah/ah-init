@@ -3,30 +3,17 @@
 if ! [[ -t 0 ]]; then
   vars=$(cat)
 else
+  dfl=$(basename "$PWD")
+  AH_APP=${AH_APP:-$dfl}
+  AH_TARGET="${AH_TARGET:-target}"
+
   while true; do
-    dfl=$AH_BUCKET
-    read -p "[AH_BUCKET] S3 bucket for ah to use? [${AH_BUCKET:-$dfl}] " AH_BUCKET
-    export AH_BUCKET="${AH_BUCKET:=$dfl}"
-
-    dfl=$AH_MASTER_REGION
-    read -p "[AH_MASTER_REGION] AWS region for S3 bucket? [${AH_MASTER_REGION:-$dfl}] " AH_MASTER_REGION
-    export AH_MASTER_REGION="${AH_MASTER_REGION:=$dfl}"
-
-    dfl=$(basename "$PWD")
-    read -p "[AH_APP] App name? [${AH_APP:-$dfl}] " AH_APP
-    export AH_APP="${AH_APP:=$dfl}"
-
-    dfl="${AH_TARGET:-target}"
-    read -p "[AH_TARGET] Target/binaries dir? [${AH_TARGET:-$dfl}] " AH_TARGET
-    export AH_TARGET="${AH_TARGET:=$dfl}"
-
-    dfl="$AH_BILLING_GROUP"
-    read -p "[AH_BILLING_GROUP] Billing group? [${AH_BILLING_GROUP:-$dfl}] " AH_BILLING_GROUP
-    export AH_BILLING_GROUP="${AH_BILLING_GROUP:=$dfl}"
-
-    dfl="$AH_BILLING_PROJECT"
-    read -p "[AH_BILLING_PROJECT] Billing project? [${AH_BILLING_PROJECT:-$dfl}] " AH_BILLING_PROJECT
-    export AH_BILLING_PROJECT="${AH_BILLING_PROJECT:=$dfl}"
+    ah_text_input -p "S3 bucket for ah to use? " AH_BUCKET
+    ah_text_input -p "AWS region for S3 bucket? " AH_MASTER_REGION
+    ah_text_input -p "App name? " AH_APP
+    ah_text_input -p "Target/binaries dir? " AH_TARGET
+    ah_text_input -p "Billing group? " AH_BILLING_GROUP
+    ah_text_input -p "Billing project? " AH_BILLING_PROJECT
 
     vars=$(set |grep -E '^AH_(BUCKET|MASTER_REGION|APP|TARGET|BILLING_GROUP|BILLING_PROJECT)=')
 
@@ -45,9 +32,8 @@ fi
 
 echo
 mkdir -p .ah || ah_die "can't create .ah directory"
-echo -n "Writing .ah/ah.conf file..."
-echo "$vars" > .ah/ah.conf
-echo done.
+ah_try -m "Writing .ah/ah.conf file..." \
+  echo "$vars" > .ah/ah.conf
 
 ah_check "policy does not already exist" ah_not ah_policy_exists || exit 0
 
@@ -80,11 +66,10 @@ S3_READONLY=$(cat <<EOT
 EOT
 )
 
-echo -n "Creating S3 access policy..."
-aws iam create-policy \
-  --path /ah/ \
-  --policy-name $AH_APP \
-  --description "Ah instance access to S3 bucket." \
-  --policy-document "$S3_READONLY" \
-  > /dev/null
-echo done.
+ah_try -m "Creating S3 access policy..." \
+  aws iam create-policy \
+    --path /ah/ \
+    --policy-name $AH_APP \
+    --description "Ah instance access to S3 bucket." \
+    --policy-document "$S3_READONLY" \
+    > /dev/null

@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "AH" "1" "March 2017" "" "AH MANUAL"
+.TH "AH" "1" "April 2017" "" "AH MANUAL"
 .
 .SH "NAME"
 \fBah\fR \- simple, service oriented management of AWS resources
@@ -43,8 +43,8 @@ Update static \fBah\fR bootstrapping files on S3\. Needed when \fBah\fR itself i
 Create or update the S3 secret file for the variable \fIsecret\fR\. The value is read from \fIstdin\fR\. \fBNOTE: the value must be explicitly quoted if it contains spaces, newlines, etc\.\fR
 .
 .TP
-\fBgrants\fR
-Print the table of S3 secret variable and \fBah\fR environment names for all environments that have been granted access to S3 secret variable files\.
+\fBgrants\fR [\fB\-u\fR]
+Print the table of S3 secret variable and \fBah\fR environment names for all environments that have been granted access to S3 secret variable files\. The \fB\-u\fR option updates the grants index for the current environment (should not be necessary unless the index has somehow gotten out of sync with the secrets granted)\.
 .
 .SS "Application Commands"
 These commands operate at the application level and must be executed from an application git directory\. The \fBinit\fR command must be executed to initialize the application before any other application or environment scope commands are attempted\.

@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 
-aws iam list-policies \
-  |jt Policies [ Path % ] [ PolicyName % ] \
-  |awk '$1 == "/ah/secrets/" {print $2}' \
-  |awk -F= '{print $1 "\t" $2}' \
-  |sort
+update_index() {
+  echo -n "$(ah_info "Updating grants index...")" 1>&2
+  ah_update_grants_index
+  ah_success "done." 1>&2
+}
+
+while getopts u o; do
+  case $o in
+    u) update_index ;;
+    *) ah_die "usage: $AH grants [-u]" ;;
+  esac
+done
+shift $((OPTIND-1))
+
+ah_all_grants

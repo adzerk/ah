@@ -7,16 +7,22 @@ tmp2=$(ah_mktemp)
 
 trap "rm -f $tmp1 $tmp2" EXIT
 
-echo -n "Creating tarball..."
-git archive --format tar $hash > $tmp1
+ah_try -m "Creating archive..." \
+  git archive --format tar $hash > $tmp1
 
 if [[ -d "$(ah_var AH_TARGET)" ]]; then
-  echo -n "adding ${AH_TARGET}..."
-  ah_tar cf $tmp2 "$AH_TARGET"
-  ah_tar Af $tmp1 $tmp2
+  ah_try -m "Compressing target..." \
+    ah_tar cf $tmp2 "$AH_TARGET"
+  ah_try -m "Adding target to archive..." \
+    ah_tar Af $tmp1 $tmp2
 fi
-echo done.
 
-echo -n "Pushing repo to S3..."
-cat $tmp1 |gzip -9 |aws s3 cp - "$s3uri" --region $AH_MASTER_REGION
-echo done.
+upload_script=$(cat <<EOT
+cat $tmp1 \
+  |gzip -9 \
+  |aws s3 cp - "$s3uri" --region $AH_MASTER_REGION
+EOT
+)
+
+ah_try -m "Pushing repo to S3..." \
+  bash -c "$upload_script"
