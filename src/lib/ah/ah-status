@@ -1,3 +1,4 @@
+#! /bin/bash
 # vim: set ft=sh:
 
 status=$(aws autoscaling describe-auto-scaling-groups \
@@ -16,7 +17,7 @@ status=$(aws autoscaling describe-auto-scaling-groups \
 )
 
 dns=$(aws ec2 describe-instances --instance-ids $(echo "$status" |cut -f2) \
-  |jt Reservations Instances [ InstanceId % ] [ PublicDnsName % ])
+  |jt Reservations Instances [ InstanceId % ] [ PublicDnsName % ] [ PrivateIpAddress % ])
 
 join -1 1 -2 2 -t '	' <(echo "$dns" |sort) <(echo "$status" |sort -k2) \
-  |awk -F '	' '{print $3 "\t" $1 "\t" $4 "\t" $5 "\t" $6 "\t" $2}'
+  |awk -F '	' '{print $4 "\t" $1 "\t" $5 "\t" $6 "\t" $7 "\t" $2 "\t" $3}'
