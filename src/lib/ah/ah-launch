@@ -76,11 +76,10 @@ if [[ -n "$(ah_asg_launch_config_name "$asg_info")" ]]; then
   ah_check "instance profile exists" ah_instance_profile_exists $AH_ENV || ah_die "aborted."
   ah_check "launch configuration exists" ah_launch_config_exists $AH_ENV || ah_die "aborted."
 
-  AH_ASG_NAME=$AH_ENV
   AH_ASG_LAUNCH_CONFIG_NAME=$(ah_asg_launch_config_name "$asg_info")
   AH_ASG_VPC_SUBNETS=$(ah_asg_vpc_subnets "$asg_info")
   AH_ASG_AZS=$(ah_asg_azs "$asg_info")
-  AH_ASG_SAVED=$(set |grep '^AH_ASG_')
+  AH_ASG_SAVED=$(set |grep '^AH_ASG_' |sort)
 
   sg_info=$(ah_sg_info $AH_ENV)
 
@@ -96,7 +95,7 @@ if [[ -n "$(ah_asg_launch_config_name "$asg_info")" ]]; then
   AH_LC_ASSOCIATE_PUBLIC_IP=$(ah_launch_config_associate_public_ip "$lc_info")
   AH_LC_CLASSIC_LINK_VPC=$(ah_launch_config_classic_link_vpc_id "$lc_info")
   AH_LC_CLASSIC_LINK_SGS=$(ah_launch_config_classic_link_security_groups "$lc_info")
-  AH_LC_SAVED=$(set |grep '^AH_LC_')
+  AH_LC_SAVED=$(set |grep '^AH_LC_' |sort)
 else
   ah_success "[FAIL]"
   update=false
@@ -128,17 +127,19 @@ while true; do
   export AH_SG_VPC
 
   if [[ ! $AH_SG_VPC ]]; then
-    while ah_select -p "Enable classic link to VPC? " AH_LC_CLASSIC_LINK_VPC "$avail_vpcs"; do
-      [[ $AH_LC_CLASSIC_LINK_VPC ]] && break
-    done
-    export AH_CLASSIC_LINK_VPC
+    if ! $update; then
+      while ah_select -p "Enable classic link to VPC? " AH_LC_CLASSIC_LINK_VPC "$avail_vpcs"; do
+        [[ $AH_LC_CLASSIC_LINK_VPC ]] && break
+      done
+    fi
+    export AH_LC_CLASSIC_LINK_VPC
 
     while true; do
       ah_select -mp "Availability zones to launch instances in? " AH_ASG_AZS "$avail_azs" \
         || [[ -z "$AH_ASG_AZS" ]] \
         || break
     done
-    export AH_AZS
+    export AH_ASG_AZS
   else
     sn=$(echo "$avail_subnets" |awk -F'	' -vVPC=$AH_SG_VPC '$1 == VPC {print $2 "\t" $3}')
     [[ ! $sn ]] && ah_warning "VPC contains no subnets" && continue
@@ -177,14 +178,13 @@ while true; do
   done
   export AH_LC_INSTANCE_TYPE
 
-  set |grep ^AH_ |sort
-  vars=$(set |grep -E "^AH_($(if [[ -z "$AH_ASG_VPC_SUBNETS" ]] ; then echo "AZS|" ; fi)|BILLING_GROUP|BILLING_PROJECT|ENV|MACHINE_IMAGE|KEY_PAIR|INSTANCE_TYPE|VPC|SUBNETS|CLASSIC_LINK_VPC)=")
+  vars=$(set |grep -E "^AH_($(if [[ -z "$AH_ASG_VPC_SUBNETS" ]] ; then echo "ASG_AZS|" ; else echo "ASG_VPC_SUBNETS|" ; fi)|BILLING_GROUP|BILLING_PROJECT|ENV|LC_IMAGE_ID|LC_KEY_NAME|LC_INSTANCE_TYPE|SG_VPC|ASG_VPC_SUBNETS|LC_CLASSIC_LINK_VPC)=" |sort)
 
   echo
   echo "$vars"
   echo
 
-  read -sn 1 -p "Approve? [yN] " approve
+  read -sn 1 -p "$(ah_bold "Approve? [")yN$(ah_bold "] ")" approve
   [[ "$approve" == "y" ]] && echo && break;
 
   echo
@@ -192,127 +192,150 @@ while true; do
   echo
 done
 
-echo -n "Creating role..."
-aws iam create-role \
-  --path /ah/ \
-  --role-name $AH_ENV \
-  --assume-role-policy-document "$role_policy_json" \
-  > /dev/null
-echo done.
+AH_ASG_NEW=$(set |grep '^AH_ASG_' |sort)
+AH_LC_NEW=$(set |grep '^AH_LC_' |sort)
 
-echo -n "Attaching app policy..."
-aws iam attach-role-policy \
-  --role-name $AH_ENV \
-  --policy-arn $(ah_policy_arn ah/$AH_APP) \
-  > /dev/null
-echo done.
+[[ $AH_ASG_NEW != $AH_ASG_SAVED ]] && asg_changed=true || asg_changed=false
+[[ $AH_LC_NEW  != $AH_LC_SAVED  ]] && lc_changed=true  || lc_changed=false
 
-echo -n "Creating inline policy..."
-aws iam put-role-policy \
-  --role-name $AH_ENV \
-  --policy-name ec2-describe-tags \
-  --policy-document "$role_policy_inline_json" \
-  > /dev/null
-echo done.
+echo "asg: $asg_changed ; lc: $lc_changed" exit
 
-echo -n "Creating instance profile..."
-aws iam create-instance-profile \
-  --path /ah/ \
-  --instance-profile-name $AH_ENV \
-  > /dev/null
-echo done.
+if ! $update; then
+  echo -n "Creating role..."
+  aws iam create-role \
+    --path /ah/ \
+    --role-name $AH_ENV \
+    --assume-role-policy-document "$role_policy_json" \
+    > /dev/null
+  echo done.
 
-echo -n "Adding role to instance profile..."
-aws iam add-role-to-instance-profile \
-  --role-name $AH_ENV \
-  --instance-profile-name $AH_ENV \
-  > /dev/null
-echo done.
+  echo -n "Attaching app policy..."
+  aws iam attach-role-policy \
+    --role-name $AH_ENV \
+    --policy-arn $(ah_policy_arn ah/$AH_APP) \
+    > /dev/null
+  echo done.
 
-# creating security groups:
-# -vpc                create vpc sg
-# -classic link       create vpc sg and ec2 classic sg
-# -ec2 classic        create ec2 classic sg
+  echo -n "Creating inline policy..."
+  aws iam put-role-policy \
+    --role-name $AH_ENV \
+    --policy-name ec2-describe-tags \
+    --policy-document "$role_policy_inline_json" \
+    > /dev/null
+  echo done.
 
-echo -n "Creating SG(s)..."
-if [[ $AH_VPC ]]; then
-  more_opts="--vpc-id ${AH_VPC}"
-elif [[ $AH_CLASSIC_LINK_VPC ]]; then
-  more_opts="--vpc-id ${AH_CLASSIC_LINK_VPC}"
-  # for classic link we create an sg in the vpc and in ec2 classic
-  aws ec2 create-security-group \
-      --group-name $AH_ENV \
-      --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
-      > /dev/null
-fi
-sg_id=$(aws ec2 create-security-group \
-            --group-name $AH_ENV \
-            --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
-            $more_opts \
-          |jt GroupId %)
-[[ ! $sg_id ]] && ah_die "could not create security group"
-echo done.
+  echo -n "Creating instance profile..."
+  aws iam create-instance-profile \
+    --path /ah/ \
+    --instance-profile-name $AH_ENV \
+    > /dev/null
+  echo done.
 
-AH_MACHINE_IMAGE_ID=$(echo "$avail_images" |awk "\$2 ==\"$AH_MACHINE_IMAGE\" {print \$1}")
+  echo -n "Adding role to instance profile..."
+  aws iam add-role-to-instance-profile \
+    --role-name $AH_ENV \
+    --instance-profile-name $AH_ENV \
+    > /dev/null
+  echo done.
 
-echo -n "Creating launch configuration..."
-if [[ $AH_VPC ]]; then
-  if [[ $AH_PUBLIC == y ]]; then
-    more_lc_opts="--associate-public-ip-address"
-  else
-    more_lc_opts="--no-associate-public-ip-address"
+  # creating security groups:
+  # -vpc                create vpc sg
+  # -classic link       create vpc sg and ec2 classic sg
+  # -ec2 classic        create ec2 classic sg
+
+  echo -n "Creating SG(s)..."
+  if [[ $AH_SG_VPC ]]; then
+    more_opts="--vpc-id ${AH_SG_VPC}"
+  elif [[ $AH_LC_CLASSIC_LINK_VPC ]]; then
+    more_opts="--vpc-id ${AH_LC_CLASSIC_LINK_VPC}"
+    # for classic link we create an sg in the vpc and in ec2 classic
+    aws ec2 create-security-group \
+        --group-name $AH_ENV \
+        --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
+        > /dev/null
   fi
+  sg_id=$(aws ec2 create-security-group \
+              --group-name $AH_ENV \
+              --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
+              $more_opts \
+            |jt GroupId %)
+  [[ ! $sg_id ]] && ah_die "could not create security group"
+  echo done.
 fi
-if [[ $AH_CLASSIC_LINK_VPC ]]; then
-  more_lc_opts="$more_lc_opts --classic-link-vpc-id $AH_CLASSIC_LINK_VPC --classic-link-vpc-security-groups $sg_id"
+
+if ! $update || $lc_changed; then
+  echo -n "$(ah_info "Creating launch configuration...")"
+  AH_LC_NAME_NEW="${AH_ENV}-$(date +'%Y-%m-%d-%H%M%S-%s')"
+  if [[ $AH_SG_VPC ]]; then
+    if [[ $AH_LC_ASSOCIATE_PUBLIC_IP == yes ]]; then
+      more_lc_opts="--associate-public-ip-address"
+    else
+      more_lc_opts="--no-associate-public-ip-address"
+    fi
+  fi
+  if [[ $AH_LC_CLASSIC_LINK_VPC ]]; then
+    more_lc_opts="$more_lc_opts --classic-link-vpc-id $AH_LC_CLASSIC_LINK_VPC --classic-link-vpc-security-groups $sg_id"
+  fi
+
+  tmp=$(mktemp)
+  trap "rm -f $tmp" EXIT
+
+  while true ; do
+    aws autoscaling create-launch-configuration \
+      --launch-configuration-name $AH_LC_NAME_NEW \
+      --image-id $AH_LC_IMAGE_ID \
+      --key-name $AH_LC_KEY_NAME \
+      --security-groups $(ah_sg_id_by_name $AH_ENV) \
+      --user-data "$(cat $AH_SHR/user-data.sh |envsubst '$AH_APP:$AH_ENV:$AH_BUCKET:$AH_MASTER_REGION')" \
+      --instance-type $AH_LC_INSTANCE_TYPE \
+      --iam-instance-profile $(ah_instance_profile_arn ah/$AH_ENV) \
+      $more_lc_opts \
+      > /dev/null 2> "$tmp" \
+      && ah_success "done." \
+      && break
+    ah_error failed.
+    [[ -n "$(cat "$tmp")" ]] && cat "$tmp"
+    echo -n "$(ah_info "Creating launch configuration...")"
+  done
+
+  [[ $AH_LC_NAME ]] && ah_warning "Old launch config (not deleted): $AH_LC_NAME"
 fi
 
-tmp=$(mktemp)
-trap "rm -f $tmp" EXIT
-
-while true ; do
-  aws autoscaling create-launch-configuration \
-    --launch-configuration-name $AH_ENV \
-    --image-id $AH_MACHINE_IMAGE_ID \
-    --key-name $AH_KEY_PAIR \
-    --security-groups $(ah_sg_id_by_name $AH_ENV) \
-    --user-data "$(cat $AH_SHR/user-data.sh |envsubst '$AH_APP:$AH_ENV:$AH_BUCKET:$AH_MASTER_REGION')" \
-    --instance-type $AH_INSTANCE_TYPE \
-    --iam-instance-profile $(ah_instance_profile_arn ah/$AH_ENV) \
-    $more_lc_opts \
-    > /dev/null \
-    2> "$tmp" \
-    && echo done. \
-    && break
-  echo failed.
-  [[ -n "$(cat "$tmp")" ]] && cat "$tmp"
-  echo -n "Creating launch configuration..."
-done
-
-echo -n "Creating autoscaling group..."
-if [[ $AH_SUBNETS ]]; then
-  more_opts="--vpc-zone-identifier $(echo "${AH_SUBNETS}" |sed 's@  *@,@')"
+if [[ $AH_ASG_VPC_SUBNETS ]]; then
+  more_opts="--vpc-zone-identifier $(echo "${AH_ASG_VPC_SUBNETS}" |sed 's@  *@,@')"
 else
-  more_opts="--availability-zones ${AH_AZS}"
+  more_opts="--availability-zones ${AH_ASG_AZS}"
 fi
-aws autoscaling create-auto-scaling-group \
-  --auto-scaling-group-name $AH_ENV \
-  --launch-configuration-name $AH_ENV \
-  --min-size 0 \
-  --max-size 0 \
-  --desired-capacity 0 \
-  --tags "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=AhApplication,Value=$AH_APP" \
-         "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=AhEnvironment,Value=$AH_ENV" \
-         "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=Name,Value=$AH_ENV" \
-         "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingGroup,Value=$AH_BILLING_GROUP" \
-         "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingProject,Value=$AH_BILLING_PROJECT" \
-  $more_opts \
-  > /dev/null
-echo done.
 
-echo -n "Enabling metrics on autoscaling group..."
-aws autoscaling enable-metrics-collection \
-  --auto-scaling-group-name $AH_ENV \
-  --granularity 1Minute \
-  > /dev/null
-echo done.
+if ! $update; then
+  echo -n "$(ah_info "Creating autoscaling group...")"
+  aws autoscaling create-auto-scaling-group \
+    --auto-scaling-group-name $AH_ENV \
+    --launch-configuration-name $AH_ENV \
+    --min-size 0 \
+    --max-size 0 \
+    --desired-capacity 0 \
+    --tags "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=AhApplication,Value=$AH_APP" \
+          "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=AhEnvironment,Value=$AH_ENV" \
+          "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=Name,Value=$AH_ENV" \
+          "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingGroup,Value=$AH_BILLING_GROUP" \
+          "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingProject,Value=$AH_BILLING_PROJECT" \
+    $more_opts \
+    > /dev/null
+  ah_success "done."
+
+  echo -n "Enabling metrics on autoscaling group..."
+  aws autoscaling enable-metrics-collection \
+    --auto-scaling-group-name $AH_ENV \
+    --granularity 1Minute \
+    > /dev/null
+  echo done.
+elif $asg_changed || $lc_changed; then
+  echo -n "$(ah_info "Updating autoscaling group...")"
+  aws autoscaling update-auto-scaling-group \
+    --auto-scaling-group-name $AH_ENV \
+    --launch-configuration-name $AH_LC_NAME_NEW \
+    $more_opts \
+    > /dev/null
+  ah_success "done."
+fi

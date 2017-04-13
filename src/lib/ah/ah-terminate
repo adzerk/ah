@@ -34,7 +34,13 @@ if ah_check "SG exists" ah_sg_exists $AH_ENV; then
 fi
 
 # sketch of how to get the ids of classic link sg in vpc
-#aws ec2 describe-security-groups --group-ids $(aws autoscaling describe-launch-configurations --launch-configuration-names "$AH_ENV" |jt . ClassicLinkVPCSecurityGroups %) |jt . [ GroupId % ] [ GroupName % ] |awk -F'	' "\$2 == \"$AH_ENV\" {print \$1}"
+ignore=$(cat <<EOT
+aws ec2 describe-security-groups \
+  --group-ids $(aws autoscaling describe-launch-configurations --launch-configuration-names "$AH_ENV" |jt . ClassicLinkVPCSecurityGroups %) \
+  |jt . [ GroupId % ] [ GroupName % ] \
+  |awk -F'	' "\$2 == \"$AH_ENV\" {print \$1}"
+EOT
+)
 
 if ah_check "instance profile exists" ah_instance_profile_exists $AH_ENV; then
   echo -n "Removing role..."
