@@ -285,10 +285,10 @@ else
 fi
 
 if ! $update; then
-  ah_retry -m "Creating autoscaling group..." \
+  ah_try -m "Creating autoscaling group..." \
     aws autoscaling create-auto-scaling-group \
       --auto-scaling-group-name $AH_ENV \
-      --launch-configuration-name $AH_ENV \
+      --launch-configuration-name $AH_LC_NAME_NEW \
       --min-size 0 \
       --max-size 0 \
       --desired-capacity 0 \
@@ -305,16 +305,29 @@ if ! $update; then
       --auto-scaling-group-name $AH_ENV \
       --granularity 1Minute \
       > /dev/null
-elif $asg_changed || $lc_changed; then
+elif $asg_changed && $lc_changed; then
   ah_try -m "Updating autoscaling group..." \
     aws autoscaling update-auto-scaling-group \
       --auto-scaling-group-name $AH_ENV \
       --launch-configuration-name $AH_LC_NAME_NEW \
       $more_opts \
       > /dev/null
+elif $asg_changed && ! $lc_changed; then
+  ah_try -m "Updating autoscaling group..." \
+    aws autoscaling update-auto-scaling-group \
+      --auto-scaling-group-name $AH_ENV \
+      --launch-configuration-name $AH_LC_NAME \
+      $more_opts \
+      > /dev/null
+elif ! $asg_changed && $lc_changed; then
+  ah_try -m "Updating autoscaling group..." \
+    aws autoscaling update-auto-scaling-group \
+      --auto-scaling-group-name $AH_ENV \
+      --launch-configuration-name $AH_LC_NAME_NEW \
+      > /dev/null
 fi
 
-if $lc_changed; then
+if $lc_changed && [ -n "$AH_LC_NAME" ]; then
   ah_try -m "Deleting old launch config ($AH_LC_NAME)..." \
     aws autoscaling delete-launch-configuration \
       --launch-configuration-name $AH_LC_NAME \
