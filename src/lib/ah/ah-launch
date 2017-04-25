@@ -285,7 +285,7 @@ else
 fi
 
 if ! $update; then
-  ah_try -m "Creating autoscaling group..." \
+  ah_retry -m "Creating autoscaling group..." \
     aws autoscaling create-auto-scaling-group \
       --auto-scaling-group-name $AH_ENV \
       --launch-configuration-name $AH_ENV \
