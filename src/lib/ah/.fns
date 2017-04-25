@@ -154,7 +154,7 @@ ah_account_alias() {
 
 ah_policy_exists() {
   local name=${1:-$(ah_var AH_APP)}
-  aws iam list-policies --no-paginate \
+  aws iam list-policies \
     |jt Policies [ PolicyName % ] \
     |grep -q "^${name}\$"
 }
