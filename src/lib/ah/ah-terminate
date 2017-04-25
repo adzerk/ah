@@ -62,6 +62,10 @@ if ah_check "role exists" ah_role_exists $AH_ENV; then
   ah_detach_all_role_policies $AH_ENV
   echo "done."
 
+  echo -n "Deleting inline role policies..."
+  ah_delete_inline_role_policies $AH_ENV
+  echo "done."
+
   echo -n "Deleting role..."
   aws iam delete-role --role-name $AH_ENV > /dev/null
   echo "done."

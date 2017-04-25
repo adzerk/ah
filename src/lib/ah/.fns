@@ -215,6 +215,13 @@ ah_role_policy_arns() {
     |sort
 }
 
+ah_inline_role_policy_names() {
+  local name=$1
+  aws iam list-role-policies --role-name $name \
+    |jt PolicyNames % \
+    |sort
+}
+
 ah_secret_policy_arns() {
   aws iam list-policies --path-prefix /ah/secrets/ \
       |jt Policies Arn % \
@@ -230,6 +237,16 @@ ah_detach_all_role_policies() {
         --policy-arn $arn
     # TODO (maybe): If the policy isn't attached to any other roles, prompt the
     # user to delete it.
+  done
+}
+
+ah_delete_inline_role_policies() {
+  local role_name=$1
+  ah_inline_role_policy_names $role_name \
+    |while read policy_name; do
+    aws iam delete-role-policy \
+        --role-name $role_name \
+        --policy-name $policy_name
   done
 }
 
