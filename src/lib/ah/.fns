@@ -63,17 +63,17 @@ ah_retry() {
 
 # Returns the S3 location of the git repo for this app.
 ah_repo() {
-  echo $(ah_var AH_BUCKET)/repo/$1
+  echo "$(ah_var AH_BUCKET)/repo${1:+/$1}"
 }
 
 # Returns the S3 location of the secrets for this app.
 ah_secret() {
-  echo $(ah_var AH_BUCKET)/secrets/$1
+  echo "$(ah_var AH_BUCKET)/secrets${1:+/$1}"
 }
 
 # Returns the S3 location of the data folder for this app.
 ah_data() {
-  echo $(ah_var AH_BUCKET)/data/$1
+  echo "$(ah_var AH_BUCKET)/data${1:+/$1}"
 }
 
 ah_bin() {
@@ -267,6 +267,7 @@ ah_grants() {
 }
 
 ah_update_grants_index() {
+  echo "s3://$(ah_data)/$(ah_var AH_APP)/$(ah_var AH_ENV).grants"
   ah_grants $(ah_var AH_ENV) \
     |aws s3 cp - "s3://$(ah_data)/$(ah_var AH_APP)/$(ah_var AH_ENV).grants" \
       --region $(ah_var AH_MASTER_REGION)
