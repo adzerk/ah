@@ -109,6 +109,7 @@ updated to a new version.</p></dd>
 <dt><code>putsecret</code> <var>secret</var></dt><dd><p>Create or update the S3 secret file for the variable <var>secret</var>. The value is
 read from <var>stdin</var>. <strong>NOTE: the value must be explicitly quoted if it
 contains spaces, newlines, etc.</strong></p></dd>
+<dt><code>rmsecret</code> <var>secret</var></dt><dd><p>Delete the S3 secret file for the variable <var>secret</var>.</p></dd>
 <dt><code>grants</code> [<code>-u</code>]</dt><dd><p>Print the table of S3 secret variable and <strong>ah</strong> environment names for all
 environments that have been granted access to S3 secret variable files. The
 <code>-u</code> option updates the grants index for the current environment (should
@@ -224,7 +225,7 @@ law.</p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>
-    <li class='tc'>April 2017</li>
+    <li class='tc'>May 2017</li>
     <li class='tr'>ah(1)</li>
   </ol>
 

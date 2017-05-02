@@ -42,6 +42,9 @@ any directory.
     read from <stdin>. **NOTE: the value must be explicitly quoted if it
     contains spaces, newlines, etc.**
 
+  * `rmsecret` <secret>:
+    Delete the S3 secret file for the variable <secret>.
+
   * `grants` [`-u`]:
     Print the table of S3 secret variable and **ah** environment names for all
     environments that have been granted access to S3 secret variable files. The
