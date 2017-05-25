@@ -19,6 +19,27 @@ ah_error()   { ah_bold "$(ah_red "$1")" 1>&2 ; }
 ah_success() { ah_bold "$(ah_green "$1")" 1>&2 ; }
 ah_clearln() { printf "\r\033[K" 1>&2 ; }
 
+## cross-platform utility fns
+###############################################################################
+
+ah_mktemp() {
+  case $(uname -s) in
+    Darwin) mktemp -t temp ;;
+    Linux) mktemp ;;
+    *) (>&2 echo "Unknown system '$(uname -s)', don't now how to ah_mktemp");
+       exit 1 ;;
+  esac
+}
+
+ah_tar() {
+  case $(uname -s) in
+    Darwin) gtar $@;;
+    Linux) tar $@;;
+    *) (>&2 echo "Unknown system '$(uname -s)', don't now how to ah_tar");
+       exit 1 ;;
+  esac
+}
+
 ## helpers
 ###############################################################################
 
@@ -36,7 +57,7 @@ ah_var() {
 }
 
 ah_try() {
-  local OPTIND OPTARG ret err tmp=$(mktemp) msg="Working..." force=false
+  local OPTIND OPTARG ret err tmp=$(ah_mktemp) msg="Working..." force=false
 
   while getopts ":fm:" o; do
     case $o in
@@ -365,27 +386,6 @@ ah_asg_vpc_subnets() {
 ah_asg_azs() {
   local info=$1
   echo $(echo "$info" |jt AutoScalingGroups [ AvailabilityZones % ])
-}
-
-## cross-platform utility fns
-###############################################################################
-
-ah_mktemp() {
-  case $(uname -s) in
-    Darwin) mktemp -t temp ;;
-    Linux) mktemp ;;
-    *) (>&2 echo "Unknown system '$(uname -s)', don't now how to ah_mktemp");
-       exit 1 ;;
-  esac
-}
-
-ah_tar() {
-  case $(uname -s) in
-    Darwin) gtar $@;;
-    Linux) tar $@;;
-    *) (>&2 echo "Unknown system '$(uname -s)', don't now how to ah_tar");
-       exit 1 ;;
-  esac
 }
 
 ## interactive pickers
