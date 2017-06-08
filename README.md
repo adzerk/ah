@@ -8,9 +8,10 @@ Deployment automation tool.
 
 1. GNU coreutils
 1. GNU make
-1. git
-1. AWS command line tool
-1. ronn (`gem install ronn`)
+1. `git`
+1. `aws` command line tool
+1. `ronn` (`gem install ronn`)
+1. `rs` (`sudo apt install rs`)
 
 To install in `/usr/local` do:
 
