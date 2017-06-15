@@ -235,11 +235,11 @@ if ! $update; then
     the_vpc="VPC $AH_LC_CLASSIC_LINK_VPC"
     more_opts="--vpc-id ${AH_LC_CLASSIC_LINK_VPC}"
     # for classic link we create an sg in the vpc and in ec2 classic
-    ah_try -m "Creating SG in EC2 classic..." \
+    ec2c_sg_id=$(ah_try -m "Creating SG in EC2 classic..." \
       aws ec2 create-security-group \
-          --group-name $AH_ENV \
-          --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
-          > /dev/null
+        --group-name $AH_ENV \
+        --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
+        | jt GroupId %)
   else
     the_vpc="EC2 classic"
   fi
@@ -266,12 +266,22 @@ if ! $update || $lc_changed; then
     more_lc_opts="$more_lc_opts --classic-link-vpc-id $AH_LC_CLASSIC_LINK_VPC --classic-link-vpc-security-groups $sg_id"
   fi
 
+  # If we're classic linking, there are 2 SGs, and we only want to use the one
+  # in EC2 Classic when creating the launch configuration.
+  #
+  # (The ID of the other SG, the VPC one, is supplied as part of $more_lc_opts.)
+  if [[ -n "$ec2c_sg_id" ]]; then
+    lc_sg_ids="$ec2c_sg_id"
+  else
+    lc_sg_ids=$(ah_sg_id_by_name $AH_ENV)
+  fi
+
   ah_retry -m "Creating launch configuration..." \
     aws autoscaling create-launch-configuration \
       --launch-configuration-name $AH_LC_NAME_NEW \
       --image-id $AH_LC_IMAGE_ID \
       --key-name $AH_LC_KEY_NAME \
-      --security-groups $(ah_sg_id_by_name $AH_ENV) \
+      --security-groups "$lc_sg_ids" \
       --user-data "$(cat $AH_SHR/user-data.sh |envsubst '$AH_APP:$AH_ENV:$AH_BUCKET:$AH_MASTER_REGION')" \
       --instance-type $AH_LC_INSTANCE_TYPE \
       --iam-instance-profile $(ah_instance_profile_arn ah/$AH_ENV) \
