@@ -25,12 +25,15 @@ if ah_check "launch configuration exists" ah_launch_config_exists $AH_ENV; then
 fi
 
 if ah_check "SG exists" ah_sg_exists $AH_ENV; then
-  echo -n "Deleting SG..."
-  aws ec2 delete-security-group \
-    --group-id $(ah_sg_id_by_name $AH_ENV) \
-    > /dev/null \
-    || ah_die "can't delete SG."
-  echo "done."
+  echo "Deleting SGs..."
+  ah_sg_id_by_name $AH_ENV | while read sg_id; do
+    echo -n "Deleting SG $sg_id..."
+    aws ec2 delete-security-group \
+      --group-id $sg_id \
+      > /dev/null \
+      || ah_die "can't delete SG."
+    echo " done."
+  done
 fi
 
 # sketch of how to get the ids of classic link sg in vpc

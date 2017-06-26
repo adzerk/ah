@@ -66,7 +66,9 @@ asg_info=$(ah_asg_info $AH_ENV)
 
 ah_info "Checking autoscaling group exists..."
 
-if [[ -n "$(ah_asg_launch_config_name "$asg_info")" ]]; then
+AH_ASG_LAUNCH_CONFIG_NAME=$(ah_asg_launch_config_name "$asg_info")
+
+if [[ -n "$AH_ASG_LAUNCH_CONFIG_NAME" ]]; then
   ah_success "[Y]\n"
   update=true
 
@@ -74,9 +76,8 @@ if [[ -n "$(ah_asg_launch_config_name "$asg_info")" ]]; then
   ah_check "SG exists" ah_sg_exists $AH_ENV || ah_die "aborted."
   ah_check "role exists" ah_role_exists $AH_ENV || ah_die "aborted."
   ah_check "instance profile exists" ah_instance_profile_exists $AH_ENV || ah_die "aborted."
-  ah_check "launch configuration exists" ah_launch_config_exists $AH_ENV || ah_die "aborted."
+  ah_check "launch configuration exists" ah_launch_config_exists "$AH_ASG_LAUNCH_CONFIG_NAME" || ah_die "aborted."
 
-  AH_ASG_LAUNCH_CONFIG_NAME=$(ah_asg_launch_config_name "$asg_info")
   AH_ASG_VPC_SUBNETS=$(ah_asg_vpc_subnets "$asg_info")
   AH_ASG_AZS=$(ah_asg_azs "$asg_info")
   AH_ASG_SAVED=$(set |grep '^AH_ASG_' |sort)
