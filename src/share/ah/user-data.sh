@@ -10,7 +10,6 @@ export AH_REGION=$(ec2metadata --availability-zone |sed 's@.$@@')
 
 if which apt-get > /dev/null; then
   apt-get update
-  apt-get -y upgrade
 
   if ! (which make && which aws) > /dev/null; then
     apt-get -y install make python python-pip
@@ -39,7 +38,7 @@ export AH_APP=$AH_APP
 export AH_ENV=$AH_ENV
 EOT
 
-DEFAULT_AWS_REGION=$AH_MASTER_REGION aws s3 cp s3://$AH_BUCKET/bin/ah-client2 /usr/local/bin/ah-client
+DEFAULT_AWS_REGION=$AH_MASTER_REGION aws s3 cp s3://$AH_BUCKET/bin/ah-client3 /usr/local/bin/ah-client
 chmod 755 /usr/local/bin/ah-client
 
 # provision and deploy application on first boot

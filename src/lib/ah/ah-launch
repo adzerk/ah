@@ -190,6 +190,11 @@ AH_LC_NEW=$(set |grep '^AH_LC_' |grep -v '^AH_LC_SAVED=' |sort)
 [[ $AH_ASG_NEW != $AH_ASG_SAVED ]] && asg_changed=true || asg_changed=false
 [[ $AH_LC_NEW  != $AH_LC_SAVED  ]] && lc_changed=true  || lc_changed=false
 
+if ! $lc_changed; then
+  read -sn 1 -p "$(ah_bold "Launch config settings unchanged. Update launch config anyway? [")yN$(ah_bold "] ")" approve
+  [[ "$approve" == "y" ]] && lc_changed=true
+fi
+
 if ! $update; then
   ah_try -m "Creating role..." \
     aws iam create-role \
