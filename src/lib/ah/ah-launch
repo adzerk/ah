@@ -248,13 +248,13 @@ if ! $update; then
   else
     the_vpc="EC2 classic"
   fi
-  sg_id=$(ah_try -m "Creating SG in ${the_vpc}..." \
+  AH_LC_CLASSIC_LINK_SGS=$(ah_try -m "Creating SG in ${the_vpc}..." \
     aws ec2 create-security-group \
       --group-name $AH_ENV \
       --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
       $more_opts \
     |jt GroupId %)
-  [[ ! $sg_id ]] && ah_die "could not create security group"
+  [[ ! $AH_LC_CLASSIC_LINK_SGS ]] && ah_die "could not create security group"
   echo done.
 fi
 
@@ -268,7 +268,7 @@ if ! $update || $lc_changed; then
     fi
   fi
   if [[ $AH_LC_CLASSIC_LINK_VPC ]]; then
-    more_lc_opts="$more_lc_opts --classic-link-vpc-id $AH_LC_CLASSIC_LINK_VPC --classic-link-vpc-security-groups $sg_id"
+    more_lc_opts="$more_lc_opts --classic-link-vpc-id $AH_LC_CLASSIC_LINK_VPC --classic-link-vpc-security-groups $AH_LC_CLASSIC_LINK_SGS"
   fi
 
   # If we're classic linking, there are 2 SGs, and we only want to use the one

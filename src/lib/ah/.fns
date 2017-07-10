@@ -219,7 +219,7 @@ ah_sg_vpc() {
 
 ah_role_exists() {
   local name=$1
-  aws iam list-roles --no-paginate \
+  aws iam list-roles \
     |jt Roles [ RoleName % ] \
     |grep -q "^${name}\$"
 }
@@ -343,7 +343,7 @@ ah_launch_config_classic_link_vpc_id() {
 
 ah_launch_config_classic_link_security_groups() {
   local info=$1
-  echo "$info" |jt LaunchConfigurations [ ClassicLinkSecurityGroups % ]
+  echo "$info" |jt LaunchConfigurations [ ClassicLinkVPCSecurityGroups % ]
 }
 
 ah_launch_config_associate_public_ip() {
