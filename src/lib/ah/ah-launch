@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
 
+while getopts ":t:" opt; do
+  case "${opt}" in
+    t) template_env="$OPTARG"
+  esac
+done
+
+if [[ -n "$template_env" ]] && [ ! -f "$template_env" ]; then
+  ah_die "Template file \"$template_env\" doesn't exist!"
+fi
+
 role_policy_json=$(cat <<EOT
 {
   "Version": "2012-10-17",
@@ -108,7 +118,7 @@ else
   ah_check "launch configuration does not already exist" ah_not ah_launch_config_exists $AH_ENV || ah_die "aborted."
 fi
 
-if ! $update; then
+if ! $update && [[ -z "$template_env" ]]; then
   while ah_select -p "Org to use as a template? " template "$avail_orgs"; do
     [[ $template ]] && break
   done
@@ -120,6 +130,12 @@ if ! $update; then
 fi
 
 while true; do
+  if [[ -n "$template_env" ]]; then
+    ah_try -m "Loading configuration from $template_env..." \
+      . <(cat $template_env | grep . | sed 's@^@export @')
+    break
+  fi
+
   if ! $update; then
     while ah_select -p "Launch into VPC? " AH_SG_VPC "$avail_vpcs"; do
       [[ $AH_SG_VPC ]] && break
@@ -183,6 +199,10 @@ while true; do
   echo "Okay, starting over (ctrl-c to abort)."
   echo
 done
+
+mkdir -p .ah || ah_die "can't create .ah directory"
+ah_try -m "Writing .ah/$AH_ENV.conf file..." \
+  echo "$vars" | grep -v 'AH_ENV=' > .ah/$AH_ENV.conf
 
 AH_ASG_NEW=$(set |grep '^AH_ASG_' |grep -v '^AH_ASG_SAVED=' |sort)
 AH_LC_NEW=$(set |grep '^AH_LC_' |grep -v '^AH_LC_SAVED=' |sort)

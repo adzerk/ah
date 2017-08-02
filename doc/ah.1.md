@@ -110,8 +110,10 @@ environment before any other environment scope commands are attempted.
   * `getsha`:
     Print the currently configured deploy SHA for the current environment.
 
-  * `launch`:
-    Interactive command to create AWS resources for a new environment.
+  * `launch` [`-t` <file>]:
+    Interactive (by default) command to create AWS resources for a new
+    environment. When the `-t` option is provided, configuration is loaded
+    from a file instead of being obtained interactively.
 
   * `terminate`:
     Destroy all AWS resources associated with the current environment. Only

@@ -159,7 +159,9 @@ by the last <code>putvar</code>.</p></dd>
 associated with git revision <var>rev</var> (or <code>HEAD</code> if not provided). See the
 <code>SPECIFYING REVISIONS</code> section of the <code>git-rev-parse</code>(1) manual for details.</p></dd>
 <dt class="flush"><code>getsha</code></dt><dd><p>Print the currently configured deploy SHA for the current environment.</p></dd>
-<dt class="flush"><code>launch</code></dt><dd><p>Interactive command to create AWS resources for a new environment.</p></dd>
+<dt><code>launch</code> [<code>-t</code> <var>file</var>]</dt><dd><p>Interactive (by default) command to create AWS resources for a new
+environment. When the <code>-t</code> option is provided, configuration is loaded
+from a file instead of being obtained interactively.</p></dd>
 <dt><code>terminate</code></dt><dd><p>Destroy all AWS resources associated with the current environment. Only
 resources managed by <code>ah</code> will be affected.</p></dd>
 <dt><code>secrets</code> [<code>-a</code>]</dt><dd><p>Print all S3 secrets to which the current environment has access, or if
@@ -225,7 +227,7 @@ law.</p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>
-    <li class='tc'>May 2017</li>
+    <li class='tc'>2017-08-02</li>
     <li class='tr'>ah(1)</li>
   </ol>
 

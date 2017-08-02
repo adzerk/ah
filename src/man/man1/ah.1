@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "AH" "1" "May 2017" "" "AH MANUAL"
+.TH "AH" "1" "2017-08-02" "" "AH MANUAL"
 .
 .SH "NAME"
 \fBah\fR \- simple, service oriented management of AWS resources
@@ -101,8 +101,8 @@ Set the configured deploy SHA for the current environment to the SHA associated 
 Print the currently configured deploy SHA for the current environment\.
 .
 .TP
-\fBlaunch\fR
-Interactive command to create AWS resources for a new environment\.
+\fBlaunch\fR [\fB\-t\fR \fIfile\fR]
+Interactive (by default) command to create AWS resources for a new environment\. When the \fB\-t\fR option is provided, configuration is loaded from a file instead of being obtained interactively\.
 .
 .TP
 \fBterminate\fR
