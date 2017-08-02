@@ -185,7 +185,7 @@ ah_policy_exists() {
 
 ah_list_vpcs() {
   aws ec2 describe-vpcs \
-      |jt Vpcs [ VpcId ]
+      |jt Vpcs [ VpcId % ]
 }
 
 ## security groups
