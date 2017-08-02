@@ -184,6 +184,10 @@ while true; do
   echo
 done
 
+mkdir -p .ah || ah_die "can't create .ah directory"
+ah_try -m "Writing .ah/$AH_ENV.conf file..." \
+  echo "$vars" > .ah/$AH_ENV.conf
+
 AH_ASG_NEW=$(set |grep '^AH_ASG_' |grep -v '^AH_ASG_SAVED=' |sort)
 AH_LC_NEW=$(set |grep '^AH_LC_' |grep -v '^AH_LC_SAVED=' |sort)
 
