@@ -458,3 +458,62 @@ ah_text_input() {
 
   eval "${1}=$(printf '%q' "$tmp")"
 }
+
+## shared between related ah commands
+###############################################################################
+
+ah_get_env_info_from_aws() {
+  ah_info "Looking up environment information from AWS...\n"
+
+  asg_info=$(ah_asg_info $AH_ENV)
+
+  ah_info "Checking autoscaling group exists..."
+
+  AH_ASG_LAUNCH_CONFIG_NAME=$(ah_asg_launch_config_name "$asg_info")
+
+  if [[ -n "$AH_ASG_LAUNCH_CONFIG_NAME" ]]; then
+    ah_success "[Y]\n"
+    updating_env_config=true
+
+    ah_check "app policy exists" ah_policy_exists || ah_die "aborted."
+    ah_check "SG exists" ah_sg_exists $AH_ENV || ah_die "aborted."
+    ah_check "role exists" ah_role_exists $AH_ENV || ah_die "aborted."
+    ah_check "instance profile exists" ah_instance_profile_exists $AH_ENV || ah_die "aborted."
+    ah_check "launch configuration exists" ah_launch_config_exists "$AH_ASG_LAUNCH_CONFIG_NAME" || ah_die "aborted."
+
+    AH_ASG_VPC_SUBNETS=$(ah_asg_vpc_subnets "$asg_info")
+    AH_ASG_AZS=$(ah_asg_azs "$asg_info")
+    AH_ASG_SAVED=$(set |grep '^AH_ASG_' |sort)
+
+    sg_info=$(ah_sg_info $AH_ENV)
+
+    AH_SG_VPC=$(ah_sg_vpc "$sg_info")
+
+    lc_info=$(ah_launch_config_info $AH_ASG_LAUNCH_CONFIG_NAME)
+
+    AH_LC_NAME=$AH_ASG_LAUNCH_CONFIG_NAME
+    AH_LC_IMAGE_ID=$(ah_launch_config_image_id "$lc_info")
+    AH_LC_KEY_NAME=$(ah_launch_config_key_name "$lc_info")
+    AH_LC_SECURITY_GROUPS=$(ah_sg_id_by_name $AH_ENV)
+    AH_LC_INSTANCE_TYPE=$(ah_launch_config_instance_type "$lc_info")
+    AH_LC_ASSOCIATE_PUBLIC_IP=$(ah_launch_config_associate_public_ip "$lc_info")
+    AH_LC_CLASSIC_LINK_VPC=$(ah_launch_config_classic_link_vpc_id "$lc_info")
+    AH_LC_CLASSIC_LINK_SGS=$(ah_launch_config_classic_link_security_groups "$lc_info")
+    AH_LC_SAVED=$(set |grep '^AH_LC_' |sort)
+  else
+    ah_success "[N]\n"
+    updating_env_config=false
+
+    ah_check "app policy exists" ah_policy_exists || ah_die "aborted."
+    ah_check "SG does not already exist" ah_not ah_sg_exists $(ah_var AH_ENV) || ah_die "aborted."
+    ah_check "role does not already exist" ah_not ah_role_exists $AH_ENV || ah_die "aborted."
+    ah_check "instance profile does not already exist" ah_not ah_instance_profile_exists $AH_ENV || ah_die "aborted."
+    ah_check "launch configuration does not already exist" ah_not ah_launch_config_exists $AH_ENV || ah_die "aborted."
+  fi
+}
+
+ah_config_vars() {
+  set |grep -E "^AH_($(if [[ -z "$AH_ASG_VPC_SUBNETS" ]] ; then echo "ASG_AZS|" ; else echo "ASG_VPC_SUBNETS|" ; fi)|BILLING_GROUP|BILLING_PROJECT|ENV|LC_IMAGE_ID|LC_KEY_NAME|LC_INSTANCE_TYPE|SG_VPC|ASG_VPC_SUBNETS|LC_CLASSIC_LINK_VPC)=" |sort
+}
+
+
