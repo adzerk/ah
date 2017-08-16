@@ -193,6 +193,7 @@ AH_LC_NEW=$(set |grep '^AH_LC_' |grep -v '^AH_LC_SAVED=' |sort)
 if ! $lc_changed; then
   read -sn 1 -p "$(ah_bold "Launch config settings unchanged. Update launch config anyway? [")yN$(ah_bold "] ")" approve
   [[ "$approve" == "y" ]] && lc_changed=true
+  echo
 fi
 
 if ! $update; then
@@ -295,7 +296,7 @@ if ! $update || $lc_changed; then
 fi
 
 if [[ $AH_ASG_VPC_SUBNETS ]]; then
-  more_opts="--vpc-zone-identifier $(echo "${AH_ASG_VPC_SUBNETS}" |sed 's@  *@,@')"
+  more_opts="--vpc-zone-identifier $(echo "${AH_ASG_VPC_SUBNETS}" |sed 's@  *@,@g')"
 else
   more_opts="--availability-zones ${AH_ASG_AZS}"
 fi
