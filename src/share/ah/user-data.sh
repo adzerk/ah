@@ -1,10 +1,24 @@
 #!/bin/bash
 
+die() {
+  exec 1>&2
+  [[ $# -gt 0 ]] && echo "$(basename "${BASH_SOURCE[0]}"): $(printf "$@")"
+  exit 1
+}
+
+os=$(. /etc/os-release ; echo $ID)
+
+case $os in
+  amzn)   az=$(ec2-metadata --availability-zone |awk '{print $2}') ;;
+  ubuntu) az=$(ec2metadata --availability-zone) ;;
+  *)      die "unknown os: %s" $os ;;
+esac
+
 export AH_APP=$AH_APP
 export AH_ENV=$AH_ENV
 export AH_BUCKET=$AH_BUCKET
 export AH_MASTER_REGION=$AH_MASTER_REGION
-export AH_REGION=$(ec2metadata --availability-zone |sed 's@.$@@')
+export AH_REGION=$(echo "$az" |sed 's@.$@@')
 
 # install packages
 
@@ -38,9 +52,9 @@ export AH_APP=$AH_APP
 export AH_ENV=$AH_ENV
 EOT
 
-DEFAULT_AWS_REGION=$AH_MASTER_REGION aws s3 cp s3://$AH_BUCKET/bin/ah-client3 /usr/local/bin/ah-client
+AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp s3://$AH_BUCKET/bin/ah-client4 /usr/local/bin/ah-client
 chmod 755 /usr/local/bin/ah-client
 
 # provision and deploy application on first boot
 
-ah-client provision deploy
+/usr/local/bin/ah-client provision deploy
