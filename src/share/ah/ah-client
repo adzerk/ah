@@ -41,8 +41,8 @@ update_vars() {
   local idx
   info "Fetching env vars..."
   mkdir -p .ah
-  idx=$(AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp $appidx -)
-  if [[ -n "$idx" ]]; then
+  idx=$(AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp $appidx - || echo 0)
+  if [[ "$idx" != 0 ]]; then
     for i in $idx; do
       echo "${i}=$(AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp ${s3cret}/$i - 2>/dev/null)"
     done > .ah/ah.env
