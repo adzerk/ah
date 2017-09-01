@@ -41,7 +41,7 @@ ignore=$(cat <<EOT
 aws ec2 describe-security-groups \
   --group-ids $(aws autoscaling describe-launch-configurations --launch-configuration-names "$AH_ENV" |jt . ClassicLinkVPCSecurityGroups %) \
   |jt . [ GroupId % ] [ GroupName % ] \
-  |awk -F'	' "\$2 == \"$AH_ENV\" {print \$1}"
+  |awk -F '	' "\$2 == \"$AH_ENV\" {print \$1}"
 EOT
 )
 
