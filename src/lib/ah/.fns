@@ -420,7 +420,7 @@ ah_select() {
     | cat -n \
     | sed 's@^ *@@' \
     | sed 's@\t@)\t@' \
-    | awk -F'	' "$(printf '$4 == "yes" {print $1 "\t■ " %s $3}
+    | awk -F'	' "$(printf '$4 == "yes" {print $1 "\t✓ " %s $3}
                            $4 != "yes" {print $1 "\t□ " %s $3}' "$showval" "$showval")" \
     | column -s '	' -t \
     | rs
