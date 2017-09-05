@@ -42,11 +42,11 @@ avail_azs=$(aws ec2 describe-availability-zones \
 avail_vpcs=$(aws ec2 describe-vpcs \
   |jt Vpcs [ VpcId % ] [ Tags [ Key % ] [ Value % ] ] \
   |sort \
-  |awk -F' ' '$2 == "Name" {print $1 "\t" $3}')
+  |awk -F ' ' '$2 == "Name" {print $1 "\t" $3}')
 
 avail_subnets=$(aws ec2 describe-subnets \
   |jt Subnets [ VpcId % ] [ SubnetId % ] [ AvailabilityZone % ] [ CidrBlock % ] \
-  |awk -F'	' '{print $1 "\t" $2 "\t" $3 " " $4}' \
+  |awk -F '	' '{print $1 "\t" $2 "\t" $3 " " $4}' \
   |sort -k3)
 
 avail_images=$(aws ec2 describe-images --owners $(ah_account_id) \
@@ -139,7 +139,7 @@ while true; do
         || break
     done
   else
-    sn=$(echo "$avail_subnets" |awk -F'	' -vVPC=$AH_SG_VPC '$1 == VPC {print $2 "\t" $3}')
+    sn=$(echo "$avail_subnets" |awk -F '	' -v VPC=$AH_SG_VPC '$1 == VPC {print $2 "\t" $3}')
     [[ ! $sn ]] && ah_warning "VPC contains no subnets" && continue
     while true; do
       ah_select -mp "Subnets for VPC? " AH_ASG_VPC_SUBNETS "$sn" \
@@ -170,7 +170,7 @@ while true; do
     [[ "$AH_LC_INSTANCE_TYPE" ]] && break
   done
 
-  vars=$(set |grep -E "^AH_($(if [[ -z "$AH_ASG_VPC_SUBNETS" ]] ; then echo "ASG_AZS|" ; else echo "ASG_VPC_SUBNETS|" ; fi)|BILLING_GROUP|BILLING_PROJECT|ENV|LC_IMAGE_ID|LC_KEY_NAME|LC_INSTANCE_TYPE|SG_VPC|ASG_VPC_SUBNETS|LC_CLASSIC_LINK_VPC)=" |sort)
+  vars=$(set |grep -E "^AH_($(if [[ -z "$AH_ASG_VPC_SUBNETS" ]] ; then echo "ASG_AZS|" ; else echo "ASG_VPC_SUBNETS|" ; fi)BILLING_GROUP|BILLING_PROJECT|ENV|LC_IMAGE_ID|LC_KEY_NAME|LC_INSTANCE_TYPE|SG_VPC|ASG_VPC_SUBNETS|LC_CLASSIC_LINK_VPC)=" |sort)
 
   echo
   echo "$vars"
