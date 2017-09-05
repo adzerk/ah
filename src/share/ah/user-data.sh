@@ -6,26 +6,17 @@ die() {
   exit 1
 }
 
-os=$(. /etc/os-release ; echo $ID)
-
-case $os in
-  amzn)   az=$(ec2-metadata --availability-zone |awk '{print $2}') ;;
-  ubuntu) az=$(ec2metadata --availability-zone) ;;
-  *)      die "unknown os: %s" $os ;;
-esac
-
 export AH_APP=$AH_APP
 export AH_ENV=$AH_ENV
 export AH_BUCKET=$AH_BUCKET
 export AH_MASTER_REGION=$AH_MASTER_REGION
-export AH_REGION=$(echo "$az" |sed 's@.$@@')
+export AH_REGION=$(curl http://169.254.169.254/latest/dynamic/instance-identity/document|grep region|awk -F\" '{print $4}')
 
 # install packages
 
 if which apt-get > /dev/null; then
-  apt-get update
-
   if ! (which make && which aws) > /dev/null; then
+    apt-get update
     apt-get -y install make python python-pip
     pip install awscli
   fi
