@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+ah_get_env_info_from_aws
+ah_config_vars | grep -v '^AH_ENV='
+

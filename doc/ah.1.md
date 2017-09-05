@@ -110,8 +110,16 @@ environment before any other environment scope commands are attempted.
   * `getsha`:
     Print the currently configured deploy SHA for the current environment.
 
+  * `describe`:
+    Print relevant configuration environment variables. The output of this
+    command for one environment can be stored in a file and then piped into `ah
+    launch` in a new environment to launch a copy of the first environment.
+
   * `launch`:
-    Interactive command to create AWS resources for a new environment.
+    Interactive (by default) command to create AWS resources for a new
+    environment. When KEY=VAL pairs are piped into STDIN, an existing
+    configuration can be reused in lieu of specifying the configuration
+    interactively.
 
   * `terminate`:
     Destroy all AWS resources associated with the current environment. Only

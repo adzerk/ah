@@ -101,8 +101,12 @@ Set the configured deploy SHA for the current environment to the SHA associated 
 Print the currently configured deploy SHA for the current environment\.
 .
 .TP
+\fBdescribe\fR
+Print relevant configuration environment variables\. The output of this command for one environment can be stored in a file and then piped into \fBah launch\fR in a new environment to launch a copy of the first environment\.
+.
+.TP
 \fBlaunch\fR
-Interactive command to create AWS resources for a new environment\.
+Interactive (by default) command to create AWS resources for a new environment\.  When KEY=VAL pairs are piped into STDIN, an existing configuration can be reused in lieu of specifying the configuration interactively\.
 .
 .TP
 \fBterminate\fR
