@@ -30,6 +30,7 @@ OPTIONS:
   -h          Print this usage info and exit.
   -c          Print environment configuration variables and exit.
   -u          Update environment configuration variables and exit.
+  -s SHA      Set the AH_SHA to deploy.
 EOT
   exit 1;
 }
@@ -57,10 +58,11 @@ update_vars() {
   AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp $appenv - 2>/dev/null >> .ah/ah.env
 }
 
-while getopts hcu o; do
+while getopts hcus: o; do
   case $o in
     c) set |grep ^AH_ ; cat $appdir/.ah/ah.env 2>/dev/null ; exit 0 ;;
     u) cd $appdir && update_vars ; exit 0 ;;
+    s) DEPLOY_SHA="$OPTARG" ;;
     *) usage ;;
   esac
 done
@@ -69,8 +71,14 @@ shift $((OPTIND-1))
 [[ -z "$1" ]] && usage
 
 info "Updating env version..."
-# this file exports the AH_SHA definition set by 'ah putsha'
-. <(AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp $appsha -)
+
+if [[ -z "$DEPLOY_SHA" ]]; then
+    # this file exports the AH_SHA definition set by 'ah putsha'
+    . <(AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp $appsha -)
+else
+    # export the supplied DEPLOY_SHA
+    export AH_SHA="$DEPLOY_SHA"
+fi
 
 appsrc=$(mktemp -d -p /opt ${AH_APP}.${AH_SHA}.XXX)
 apptgz=s3://$AH_BUCKET/repo/$AH_APP/${AH_SHA}.tar.gz
