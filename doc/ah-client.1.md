@@ -3,7 +3,7 @@ ah-client(1) -- simple, service oriented management of AWS resources
 
 ## SYNOPSIS
 
-`ah-client` [`-hcu`] [<TARGET> ...]
+`ah-client` [`-hcu`] [`-s` <SHA>] [<TARGET> ...]
 
 ## DESCRIPTION
 
@@ -26,6 +26,9 @@ application's environment variables.
     Print **ah** and application environment variables and exit. The output
     format is one <NAME>=<value> pair per line, suitable for use with `eval`
     or `source` in a `bash`(1) shell.
+
+  * `-s` <SHA>:
+    Use <SHA> instead of the one set on the env via `ah putsha`.
 
   * `-u`:
     Update application environment variables, then exit.
