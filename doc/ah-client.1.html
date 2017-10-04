@@ -78,7 +78,7 @@
 
 <h2 id="SYNOPSIS">SYNOPSIS</h2>
 
-<p><code>ah-client</code> [<code>-hcu</code>] [<var>TARGET</var> ...]</p>
+<p><code>ah-client</code> [<code>-hcu</code>] [<code>-s</code> <var>SHA</var>] [<var>TARGET</var> ...]</p>
 
 <h2 id="DESCRIPTION">DESCRIPTION</h2>
 
@@ -99,6 +99,7 @@ application's environment variables.</p>
 <dt class="flush"><code>-c</code></dt><dd><p>Print <strong>ah</strong> and application environment variables and exit. The output
 format is one <var>NAME</var>=<var>value</var> pair per line, suitable for use with <code>eval</code>
 or <code>source</code> in a <code>bash</code>(1) shell.</p></dd>
+<dt class="flush"><code>-s</code> <var>SHA</var></dt><dd><p>Use <var>SHA</var> instead of the one set on the env via <code>ah putsha</code>.</p></dd>
 <dt class="flush"><code>-u</code></dt><dd><p>Update application environment variables, then exit.</p></dd>
 </dl>
 
@@ -117,7 +118,7 @@ law.</p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>
-    <li class='tc'>February 2017</li>
+    <li class='tc'>October 2017</li>
     <li class='tr'>ah-client(1)</li>
   </ol>
 
