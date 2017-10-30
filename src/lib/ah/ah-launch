@@ -84,7 +84,7 @@ if [[ -n "$AH_ASG_LAUNCH_CONFIG_NAME" ]]; then
 
   sg_info=$(ah_sg_info $AH_ENV)
 
-  AH_SG_VPC=$(ah_sg_vpc "$sg_info")
+  AH_SG_VPC=$(ah_sg_vpc "$asg_info")
 
   lc_info=$(ah_launch_config_info $AH_ASG_LAUNCH_CONFIG_NAME)
 
