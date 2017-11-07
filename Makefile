@@ -1,4 +1,4 @@
-.PHONY: all clean install uninstall tools
+.PHONY: all clean install uninstall tools instance-types
 
 SHELL  := /bin/bash
 PREFIX ?= /usr/local
@@ -55,6 +55,8 @@ src/lib/ah/instance-types.txt:
 		|grep '^  *[a-z]' \
 		|awk '{print $1}' \
 		> $@
+
+instance-types: src/lib/ah/instance-types.txt
 
 tools: tools/json-table.tar.gz
 
