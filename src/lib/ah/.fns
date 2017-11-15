@@ -373,6 +373,39 @@ ah_asg_info() {
     --auto-scaling-group-names $name
 }
 
+ah_env_info() {
+  local name=$1 lc_name lc_info asg_info subnet vpc
+
+  asg_info=$(aws autoscaling describe-auto-scaling-groups \
+    --auto-scaling-group-names $name)
+  subnet=$(echo "$asg_info" |jt . VPCZoneIdentifier % |awk -F, '{print $1}')
+  if [[ $subnet ]]; then
+    vpc=$(aws ec2 describe-subnets --subnet-ids $subnet |jt . VpcId %)
+  fi
+  lc_name=$(echo "$asg_info" |jt . LaunchConfigurationName %)
+  if [[ $lc_name ]]; then
+    lc_info=$(aws autoscaling describe-launch-configurations \
+      --launch-configuration-names $lc_name)
+  fi
+
+  cat <<EOT
+AH_ENV_ASG=$(printf "%q" "$(echo "$asg_info" |jt . AutoScalingGroupName %)")
+AH_ENV_VPC='$vpc'
+AH_ENV_AZS='$(echo "$asg_info" |jt . AvailabilityZones % |xargs echo)'
+AH_ENV_SUBNETS='$(echo "$asg_info" |jt . VPCZoneIdentifier % |tr '[,]' '[ ]')'
+AH_ENV_LC='$lc_name'
+AH_ENV_PUBLIC_IP='$(echo "$lc_info" |jt . AssociatePublicIpAddress % |grep true)'
+AH_ENV_SGS='$(echo "$lc_info" |jt . SecurityGroups % |xargs echo)'
+AH_ENV_CL_VPC='$(echo "$lc_info" |jt . ClassicLinkVPCId %)'
+AH_ENV_CL_VPC_SGS='$(echo "$lc_info" |jt . ClassicLinkVPCSecurityGroups % |xargs echo)'
+AH_ENV_PROFILE='$(echo "$lc_info" |jt . IamInstanceProfile %)'
+AH_ENV_IMAGE='$(echo "$lc_info" |jt . ImageId %)'
+AH_ENV_TYPE='$(echo "$lc_info" |jt . InstanceType %)'
+AH_ENV_KEY='$(echo "$lc_info" |jt . KeyName %)'
+AH_ENV_USER_DATA='$(echo "$lc_info" |jt . UserData %)'
+EOT
+}
+
 ah_asg_launch_config_name() {
   local info=$1
   echo "$info" |jt AutoScalingGroups [ LaunchConfigurationName % ]

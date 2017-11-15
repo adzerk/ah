@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+save_asg_config() {
+  printenv |grep -E '^AH_ENV_(ASG|VPC|AZS|LC|SUBNETS)' |sort
+}
+
+save_lc_config() {
+  printenv |grep -E '^AH_ENV_(PUBLIC_IP|CL_VPC_SGS|PROFILE|IMAGE|TYPE|KEY|SGS|USER_DATA)' |sort
+}
+
 role_policy_json=$(cat <<EOT
 {
   "Version": "2012-10-17",
@@ -34,6 +42,8 @@ role_policy_inline_json=$(cat <<EOT
 EOT
 )
 
+: $(ah_var AH_APP) $(ah_var AH_ENV) # Make sure these vars are defined.
+
 ah_info "Loading AWS configuration info..."
 
 avail_azs=$(aws ec2 describe-availability-zones \
@@ -53,6 +63,9 @@ avail_images=$(aws ec2 describe-images --owners $(ah_account_id) \
   |jt Images [ ImageId % ] [ Name % ] \
   |sort -k2)
 
+avail_sgs=$(aws ec2 describe-security-groups \
+  |jt . [ VpcId % ] [ GroupId % ] [ GroupName % ])
+
 avail_instance_types=$(cat "${AH_LIB}/instance-types.txt")
 
 avail_keys=$(aws ec2 describe-key-pairs --no-paginate \
@@ -60,52 +73,26 @@ avail_keys=$(aws ec2 describe-key-pairs --no-paginate \
 
 avail_orgs=$(ah_s3_ls etc |sed 's@\.conf$@@')
 
+vpc_avail_sgs() {
+  echo "$avail_sgs" \
+    |awk -F\\t "$(printf '$1 == "%s" {OFS="\t"; print $2, $3}' $1)"
+}
+
 ah_success "OK.\n"
 
-asg_info=$(ah_asg_info $AH_ENV)
+ah_info "Loading env configuration info..."
+. <(ah_env_info $AH_ENV |sed 's@^@export @')
+ah_success "OK.\n"
 
-ah_info "Checking autoscaling group exists..."
-
-AH_ASG_LAUNCH_CONFIG_NAME=$(ah_asg_launch_config_name "$asg_info")
-
-if [[ -n "$AH_ASG_LAUNCH_CONFIG_NAME" ]]; then
-  ah_success "[Y]\n"
+if [[ $AH_ENV_ASG ]]; then
   update=true
-
-  ah_check "app policy exists" ah_policy_exists || ah_die "aborted."
-  ah_check "SG exists" ah_sg_exists $AH_ENV || ah_die "aborted."
-  ah_check "role exists" ah_role_exists $AH_ENV || ah_die "aborted."
-  ah_check "instance profile exists" ah_instance_profile_exists $AH_ENV || ah_die "aborted."
-  ah_check "launch configuration exists" ah_launch_config_exists "$AH_ASG_LAUNCH_CONFIG_NAME" || ah_die "aborted."
-
-  AH_ASG_VPC_SUBNETS=$(ah_asg_vpc_subnets "$asg_info")
-  AH_ASG_AZS=$(ah_asg_azs "$asg_info")
-  AH_ASG_SAVED=$(set |grep '^AH_ASG_' |sort)
-
-  sg_info=$(ah_sg_info $AH_ENV)
-
-  AH_SG_VPC=$(ah_sg_vpc "$sg_info")
-
-  lc_info=$(ah_launch_config_info $AH_ASG_LAUNCH_CONFIG_NAME)
-
-  AH_LC_NAME=$AH_ASG_LAUNCH_CONFIG_NAME
-  AH_LC_IMAGE_ID=$(ah_launch_config_image_id "$lc_info")
-  AH_LC_KEY_NAME=$(ah_launch_config_key_name "$lc_info")
-  AH_LC_SECURITY_GROUPS=$(ah_sg_id_by_name $AH_ENV)
-  AH_LC_INSTANCE_TYPE=$(ah_launch_config_instance_type "$lc_info")
-  AH_LC_ASSOCIATE_PUBLIC_IP=$(ah_launch_config_associate_public_ip "$lc_info")
-  AH_LC_CLASSIC_LINK_VPC=$(ah_launch_config_classic_link_vpc_id "$lc_info")
-  AH_LC_CLASSIC_LINK_SGS=$(ah_launch_config_classic_link_security_groups "$lc_info")
-  AH_LC_SAVED=$(set |grep '^AH_LC_' |sort)
+  AH_ASG_SAVED=$(save_asg_config)
+  AH_LC_SAVED=$(save_lc_config)
 else
-  ah_success "[N]\n"
   update=false
-
   ah_check "app policy exists" ah_policy_exists || ah_die "aborted."
-  ah_check "SG does not already exist" ah_not ah_sg_exists $(ah_var AH_ENV) || ah_die "aborted."
   ah_check "role does not already exist" ah_not ah_role_exists $AH_ENV || ah_die "aborted."
   ah_check "instance profile does not already exist" ah_not ah_instance_profile_exists $AH_ENV || ah_die "aborted."
-  ah_check "launch configuration does not already exist" ah_not ah_launch_config_exists $AH_ENV || ah_die "aborted."
 fi
 
 if ! $update; then
@@ -121,36 +108,40 @@ fi
 
 while true; do
   if ! $update; then
-    while ah_select -p "Launch into VPC? " AH_SG_VPC "$avail_vpcs"; do
-      [[ $AH_SG_VPC ]] && break
+    while ah_select -p "Launch into VPC? " AH_ENV_VPC "$avail_vpcs"; do
+      [[ $AH_ENV_VPC ]] && break
     done
   fi
 
-  if [[ ! $AH_SG_VPC ]]; then
+  ah_select -p "Use existing ${AH_ENV_VPC:+VPC }security group? " AH_ENV_SGS "$(vpc_avail_sgs $AH_ENV_VPC)"
+
+  if [[ ! $AH_ENV_VPC ]]; then
     if ! $update; then
-      while ah_select -p "Enable classic link to VPC? " AH_LC_CLASSIC_LINK_VPC "$avail_vpcs"; do
-        [[ $AH_LC_CLASSIC_LINK_VPC ]] && break
+      while ah_select -p "Enable classic link to VPC? " AH_ENV_CL_VPC "$avail_vpcs"; do
+        [[ $AH_ENV_CL_VPC ]] && break
       done
     fi
 
+    if [[ $AH_ENV_CL_VPC ]]; then
+      ah_select -p "Use existing VPC security group for classic link? " AH_ENV_CL_VPC_SGS "$(vpc_avail_sgs $AH_ENV_CL_VPC)"
+    fi
+
     while true; do
-      ah_select -mp "Availability zones to launch instances in? " AH_ASG_AZS "$avail_azs" \
-        || [[ -z "$AH_ASG_AZS" ]] \
+      ah_select -mp "Availability zones to launch instances in? " AH_ENV_AZS "$avail_azs" \
+        || [[ -z "$AH_ENV_AZS" ]] \
         || break
     done
   else
-    sn=$(echo "$avail_subnets" |awk -F '	' -v VPC=$AH_SG_VPC '$1 == VPC {print $2 "\t" $3}')
-    [[ ! $sn ]] && ah_warning "VPC contains no subnets" && continue
+    sn=$(echo "$avail_subnets" |awk -F '	' -v VPC=$AH_ENV_VPC '$1 == VPC {print $2 "\t" $3}')
+    [[ ! $sn ]] && ah_warning "VPC contains no subnets\n" && continue
     while true; do
-      ah_select -mp "Subnets for VPC? " AH_ASG_VPC_SUBNETS "$sn" \
-        || [[ -z "$AH_ASG_VPC_SUBNETS" ]] \
+      ah_select -mp "Subnets for VPC? " AH_ENV_SUBNETS "$sn" \
+        || [[ -z "$AH_ENV_SUBNETS" ]] \
         || break
     done
 
-    AH_LC_ASSOCIATE_PUBLIC_IP=${AH_LC_ASSOCIATE_PUBLIC_IP:=yes}
-    while ah_select -v AH_LC_ASSOCIATE_PUBLIC_IP "yes	assign public IPs to instances"; do
-      :
-    done
+    AH_ENV_PUBLIC_IP=${AH_ENV_PUBLIC_IP:=true}
+    ah_select -v AH_ENV_PUBLIC_IP "true	assign public IPs to instances"
   fi
 
   if ! $update; then
@@ -158,19 +149,19 @@ while true; do
     ah_text_input -p "Billing project? " AH_BILLING_PROJECT
   fi
 
-  while ah_select -p "Machine image? " AH_LC_IMAGE_ID "$avail_images"; do
-    [[ "$AH_LC_IMAGE_ID" ]] && break
+  while ah_select -p "Machine image? " AH_ENV_IMAGE "$avail_images"; do
+    [[ "$AH_ENV_IMAGE" ]] && break
   done
 
-  while ah_select -p "SSH key pair to use? " AH_LC_KEY_NAME "$avail_keys"; do
-    [[ "$AH_LC_KEY_NAME" ]] && break
+  while ah_select -p "SSH key pair to use? " AH_ENV_KEY "$avail_keys"; do
+    [[ "$AH_ENV_KEY" ]] && break
   done
 
-  while ah_select -p "Instance type? " AH_LC_INSTANCE_TYPE "$avail_instance_types"; do
-    [[ "$AH_LC_INSTANCE_TYPE" ]] && break
+  while ah_select -p "Instance type? " AH_ENV_TYPE "$avail_instance_types"; do
+    [[ "$AH_ENV_TYPE" ]] && break
   done
 
-  vars=$(set |grep -E "^AH_($(if [[ -z "$AH_ASG_VPC_SUBNETS" ]] ; then echo "ASG_AZS|" ; else echo "ASG_VPC_SUBNETS|" ; fi)BILLING_GROUP|BILLING_PROJECT|ENV|LC_IMAGE_ID|LC_KEY_NAME|LC_INSTANCE_TYPE|SG_VPC|ASG_VPC_SUBNETS|LC_CLASSIC_LINK_VPC)=" |sort)
+  vars=$(printenv |grep -E '^AH_(ENV_|BILLING_)' |sort)
 
   echo
   echo "$vars"
@@ -184,8 +175,8 @@ while true; do
   echo
 done
 
-AH_ASG_NEW=$(set |grep '^AH_ASG_' |grep -v '^AH_ASG_SAVED=' |sort)
-AH_LC_NEW=$(set |grep '^AH_LC_' |grep -v '^AH_LC_SAVED=' |sort)
+AH_ASG_NEW=$(save_asg_config)
+AH_LC_NEW=$(save_lc_config)
 
 [[ $AH_ASG_NEW != $AH_ASG_SAVED ]] && asg_changed=true || asg_changed=false
 [[ $AH_LC_NEW  != $AH_LC_SAVED  ]] && lc_changed=true  || lc_changed=false
@@ -234,78 +225,66 @@ if ! $update; then
   # -classic link       create vpc sg and ec2 classic sg
   # -ec2 classic        create ec2 classic sg
 
-  if [[ $AH_SG_VPC ]]; then
-    the_vpc="VPC $AH_SG_VPC"
-    more_opts="--vpc-id ${AH_SG_VPC}"
-  elif [[ $AH_LC_CLASSIC_LINK_VPC ]]; then
-    the_vpc="VPC $AH_LC_CLASSIC_LINK_VPC"
-    more_opts="--vpc-id ${AH_LC_CLASSIC_LINK_VPC}"
+  if [[ $AH_ENV_VPC ]]; then
+    sg_vpc_id=$AH_ENV_VPC
+  elif [[ $AH_ENV_CL_VPC ]]; then
+    sg_vpc_id=$AH_ENV_CL_VPC
     # for classic link we create an sg in the vpc and in ec2 classic
-    ec2c_sg_id=$(ah_try -m "Creating SG in EC2 classic..." \
+    if [[ ! $AH_ENV_SGS ]]; then
+      AH_ENV_SGS=$(ah_try -m "Creating SG in EC2 classic..." \
+        aws ec2 create-security-group \
+          --group-name $AH_ENV \
+          --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
+          | jt GroupId %)
+      [[ ! $AH_ENV_SGS ]] && ah_die "could not create security group"
+    fi
+  fi
+
+  if [[ $AH_ENV_CL_VPC && ! $AH_ENV_CL_VPC_SGS ]] \
+    || [[ ! $AH_ENV_CL_VPC && ! $AH_ENV_SGS ]]; then
+    created_sgs=$(ah_try -m "Creating SG in ${sg_vpc_id:-EC2 classic}..." \
       aws ec2 create-security-group \
         --group-name $AH_ENV \
         --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
-        | jt GroupId %)
-  else
-    the_vpc="EC2 classic"
+        ${sg_vpc_id:+--vpc-id $sg_vpc_id} \
+      |jt GroupId %)
+
+    [[ ! $created_sgs ]] && ah_die "could not create security group"
+
+    if [[ $AH_ENV_CL_VPC ]]; then
+      AH_ENV_CL_VPC_SGS=$created_sgs
+    else
+      AH_ENV_SGS=$created_sgs
+    fi
   fi
-  AH_LC_CLASSIC_LINK_SGS=$(ah_try -m "Creating SG in ${the_vpc}..." \
-    aws ec2 create-security-group \
-      --group-name $AH_ENV \
-      --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
-      $more_opts \
-    |jt GroupId %)
-  [[ ! $AH_LC_CLASSIC_LINK_SGS ]] && ah_die "could not create security group"
   echo done.
 fi
 
 if ! $update || $lc_changed; then
-  AH_LC_NAME_NEW="${AH_ENV}-$(date +'%Y-%m-%d-%H%M%S-%s')"
-  if [[ $AH_SG_VPC ]]; then
-    if [[ $AH_LC_ASSOCIATE_PUBLIC_IP == yes ]]; then
-      more_lc_opts="--associate-public-ip-address"
-    else
-      more_lc_opts="--no-associate-public-ip-address"
-    fi
-  fi
-  if [[ $AH_LC_CLASSIC_LINK_VPC ]]; then
-    more_lc_opts="$more_lc_opts --classic-link-vpc-id $AH_LC_CLASSIC_LINK_VPC --classic-link-vpc-security-groups $AH_LC_CLASSIC_LINK_SGS"
-  fi
-
-  # If we're classic linking, there are 2 SGs, and we only want to use the one
-  # in EC2 Classic when creating the launch configuration.
-  #
-  # (The ID of the other SG, the VPC one, is supplied as part of $more_lc_opts.)
-  if [[ -n "$ec2c_sg_id" ]]; then
-    lc_sg_ids="$ec2c_sg_id"
-  else
-    lc_sg_ids=$(ah_sg_id_by_name $AH_ENV)
-  fi
+  AH_ENV_LC_NEW="${AH_ENV}-$(date +'%Y-%m-%d-%H%M%S-%s')"
+  AH_ENV_PUBLIC_IP=${AH_ENV_PUBLIC_IP:+--associate-public-ip-address}
+  AH_ENV_PUBLIC_IP=${AH_ENV_PUBLIC_IP:---no-associate-public-ip-address}
 
   ah_retry -m "Creating launch configuration..." \
     aws autoscaling create-launch-configuration \
-      --launch-configuration-name $AH_LC_NAME_NEW \
-      --image-id $AH_LC_IMAGE_ID \
-      --key-name $AH_LC_KEY_NAME \
-      --security-groups "$lc_sg_ids" \
+      --launch-configuration-name $AH_ENV_LC_NEW \
+      --image-id $AH_ENV_IMAGE \
+      --key-name $AH_ENV_KEY \
+      --security-groups $AH_ENV_SGS \
       --user-data "$(cat $AH_SHR/user-data.sh |envsubst '$AH_APP:$AH_ENV:$AH_BUCKET:$AH_MASTER_REGION')" \
-      --instance-type $AH_LC_INSTANCE_TYPE \
+      --instance-type $AH_ENV_TYPE \
       --iam-instance-profile $(ah_instance_profile_arn ah/$AH_ENV) \
-      $more_lc_opts \
+      ${AH_ENV_CL_VPC:+--classic-link-vpc-id $AH_ENV_CL_VPC} \
+      ${AH_ENV_CL_VPC_SGS:+--classic-link-vpc-security-groups $AH_ENV_CL_VPC_SGS} \
+      ${AH_ENV_VPC:+$AH_ENV_PUBLIC_IP} \
       > /dev/null
-fi
-
-if [[ $AH_ASG_VPC_SUBNETS ]]; then
-  more_opts="--vpc-zone-identifier $(echo "${AH_ASG_VPC_SUBNETS}" |sed 's@  *@,@g')"
-else
-  more_opts="--availability-zones ${AH_ASG_AZS}"
 fi
 
 if ! $update; then
   ah_try -m "Creating autoscaling group..." \
     aws autoscaling create-auto-scaling-group \
       --auto-scaling-group-name $AH_ENV \
-      --launch-configuration-name $AH_LC_NAME_NEW \
+      --launch-configuration-name $AH_ENV_LC_NEW \
       --min-size 0 \
       --max-size 0 \
       --desired-capacity 0 \
@@ -314,7 +293,8 @@ if ! $update; then
             "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=Name,Value=$AH_ENV" \
             "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingGroup,Value=$AH_BILLING_GROUP" \
             "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingProject,Value=$AH_BILLING_PROJECT" \
-      $more_opts \
+      ${AH_ENV_SUBNETS:+--vpc-zone-identifier $(echo $AH_ENV_SUBNETS |tr -s '[ ]' '[,]')} \
+      ${AH_ENV_AZS:+--availability-zones $AH_ENV_AZS} \
       > /dev/null
 
   ah_try -m "Enabling metrics on autoscaling group..." \
@@ -326,27 +306,29 @@ elif $asg_changed && $lc_changed; then
   ah_try -m "Updating autoscaling group..." \
     aws autoscaling update-auto-scaling-group \
       --auto-scaling-group-name $AH_ENV \
-      --launch-configuration-name $AH_LC_NAME_NEW \
-      $more_opts \
+      --launch-configuration-name $AH_ENV_LC_NEW \
+      ${AH_ENV_SUBNETS:+--vpc-zone-identifier $(echo $AH_ENV_SUBNETS |tr -s '[ ]' '[,]')} \
+      ${AH_ENV_AZS:+--availability-zones $AH_ENV_AZS} \
       > /dev/null
 elif $asg_changed && ! $lc_changed; then
   ah_try -m "Updating autoscaling group..." \
     aws autoscaling update-auto-scaling-group \
       --auto-scaling-group-name $AH_ENV \
-      --launch-configuration-name $AH_LC_NAME \
-      $more_opts \
+      --launch-configuration-name $AH_ENV_LC \
+      ${AH_ENV_SUBNETS:+--vpc-zone-identifier $(echo $AH_ENV_SUBNETS |tr -s '[ ]' '[,]')} \
+      ${AH_ENV_AZS:+--availability-zones $AH_ENV_AZS} \
       > /dev/null
 elif ! $asg_changed && $lc_changed; then
   ah_try -m "Updating autoscaling group..." \
     aws autoscaling update-auto-scaling-group \
       --auto-scaling-group-name $AH_ENV \
-      --launch-configuration-name $AH_LC_NAME_NEW \
+      --launch-configuration-name $AH_ENV_LC_NEW \
       > /dev/null
 fi
 
-if $lc_changed && [ -n "$AH_LC_NAME" ]; then
-  ah_try -m "Deleting old launch config ($AH_LC_NAME)..." \
+if $lc_changed && [ -n "$AH_ENV_LC" ]; then
+  ah_try -m "Deleting old launch config ($AH_ENV_LC)..." \
     aws autoscaling delete-launch-configuration \
-      --launch-configuration-name $AH_LC_NAME \
+      --launch-configuration-name $AH_ENV_LC \
       > /dev/null
 fi
