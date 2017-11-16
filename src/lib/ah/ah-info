@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+: $(ah_var AH_ENV)
+
+. <(ah_env_info $AH_ENV |sed 's@^@export @')
+printenv |grep ^AH_

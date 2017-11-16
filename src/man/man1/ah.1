@@ -85,6 +85,10 @@ These commands operate at the environment level and must be executed from the ap
 Set the default environment to \fIenv\fR if \fIenv\fR is specified, or print the current environment name\.
 .
 .TP
+\fBinfo\fR
+Prints env settings, one \fINAME\fR=\fIvalue\fR pair per line, suitable for eval by the \fBbash\fR(1) shell\.
+.
+.TP
 \fBputvars\fR
 Update the current environment\'s application config variables, read from \fIstdin\fR\. See \fBFILES\fR below for a description of the expected format\.
 .

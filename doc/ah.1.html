@@ -151,6 +151,8 @@ environment before any other environment scope commands are attempted.</p>
 <dl>
 <dt><code>env</code> [<var>env</var>]</dt><dd><p>Set the default environment to <var>env</var> if <var>env</var> is specified, or print the
 current environment name.</p></dd>
+<dt class="flush"><code>info</code></dt><dd><p>Prints env settings, one <var>NAME</var>=<var>value</var> pair per line, suitable for eval
+by the <code>bash</code>(1) shell.</p></dd>
 <dt class="flush"><code>putvars</code></dt><dd><p>Update the current environment's application config variables, read from
 <var>stdin</var>. See <strong>FILES</strong> below for a description of the expected format.</p></dd>
 <dt class="flush"><code>getvars</code></dt><dd><p>Print the application config variables stored for the current environment

@@ -5,6 +5,10 @@ read -sn 1 -p "Really terminate environment '$(ah_var AH_ENV)'? [yN] " approve
 echo
 [[ "$approve" == "y" ]] || exit 0
 
+ah_info "Loading env configuration info..."
+. <(ah_env_info $AH_ENV |sed 's@^@export @')
+ah_success "OK.\n"
+
 if ah_check "autoscaling group exists" ah_asg_exists $AH_ENV; then
   echo -n "Deleting autoscaling group..."
   aws autoscaling delete-auto-scaling-group \
@@ -16,60 +20,47 @@ if ah_check "autoscaling group exists" ah_asg_exists $AH_ENV; then
   done
 fi
 
-if ah_check "launch configuration exists" ah_launch_config_exists $AH_ENV; then
-  echo -n "Deleting launch configuration..."
-  aws autoscaling delete-launch-configuration \
-    --launch-configuration-name $AH_ENV \
-    > /dev/null
-  echo "done."
+if ah_check "launch configuration exists" ah_launch_config_exists $AH_ENV_LC; then
+  ah_try -m "Deleting launch configuration $AH_ENV_LC..." \
+    aws autoscaling delete-launch-configuration \
+      --launch-configuration-name $AH_ENV_LC \
+      > /dev/null
 fi
 
-if ah_check "SG exists" ah_sg_exists $AH_ENV; then
-  echo "Deleting SGs..."
-  ah_sg_id_by_name $AH_ENV | while read sg_id; do
-    echo -n "Deleting SG $sg_id..."
+for sg_id in $AH_ENV_SGS; do
+  ah_try -fm "Deleting SG $sg_id..." \
     aws ec2 delete-security-group \
       --group-id $sg_id \
-      > /dev/null \
-      || ah_die "can't delete SG."
-    echo " done."
-  done
-fi
+      > /dev/null
+done
 
-# sketch of how to get the ids of classic link sg in vpc
-ignore=$(cat <<EOT
-aws ec2 describe-security-groups \
-  --group-ids $(aws autoscaling describe-launch-configurations --launch-configuration-names "$AH_ENV" |jt . ClassicLinkVPCSecurityGroups %) \
-  |jt . [ GroupId % ] [ GroupName % ] \
-  |awk -F '	' "\$2 == \"$AH_ENV\" {print \$1}"
-EOT
-)
+for sg_id in $AH_ENV_CL_VPC_SGS; do
+  ah_try -fm "Deleting SG $sg_id..." \
+    aws ec2 delete-security-group \
+      --group-id $sg_id \
+      > /dev/null
+done
 
 if ah_check "instance profile exists" ah_instance_profile_exists $AH_ENV; then
-  echo -n "Removing role..."
-  aws iam remove-role-from-instance-profile \
-    --role-name $AH_ENV \
-    --instance-profile-name $AH_ENV \
-    > /dev/null
-  echo "done."
+  ah_try -m "Removing role..." \
+    aws iam remove-role-from-instance-profile \
+      --role-name $AH_ENV \
+      --instance-profile-name $AH_ENV \
+      > /dev/null
 
-  echo -n "Deleting instance profile..."
-  aws iam delete-instance-profile \
-    --instance-profile-name $AH_ENV \
-    > /dev/null
-  echo "done."
+  ah_try -m "Deleting instance profile..." \
+    aws iam delete-instance-profile \
+      --instance-profile-name $AH_ENV \
+      > /dev/null
 fi
 
 if ah_check "role exists" ah_role_exists $AH_ENV; then
-  echo -n "Detaching role policies..."
-  ah_detach_all_role_policies $AH_ENV
-  echo "done."
+  ah_try -m "Detaching role policies..." \
+    ah_detach_all_role_policies $AH_ENV
 
-  echo -n "Deleting inline role policies..."
-  ah_delete_inline_role_policies $AH_ENV
-  echo "done."
+  ah_try -m "Deleting inline role policies..." \
+    ah_delete_inline_role_policies $AH_ENV
 
-  echo -n "Deleting role..."
-  aws iam delete-role --role-name $AH_ENV > /dev/null
-  echo "done."
+  ah_try -m "Deleting role..." \
+    aws iam delete-role --role-name $AH_ENV > /dev/null
 fi
