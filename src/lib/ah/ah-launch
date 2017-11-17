@@ -41,7 +41,7 @@ EOT
 
 extra_policies=$(cat ./.ah/launch/inline_policies.json 2>/dev/null |jt %)
 
-policies=$({ echo "$default_policies" ; echo "$extra_policies" ; } |paste -sd,)
+policies=$({ echo "$default_policies" ; echo "$extra_policies" ; } |grep . |paste -sd,)
 
 role_policy_inline_json=$(cat <<EOT |jt %
 {
