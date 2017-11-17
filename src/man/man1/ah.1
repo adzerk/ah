@@ -106,7 +106,7 @@ Print the currently configured deploy SHA for the current environment\.
 .
 .TP
 \fBlaunch\fR
-Interactive command to create AWS resources for a new environment\.
+Interactive command to create AWS resources for a new environment\. Extra permissions can be added by specifying them in a file named \fB\.ah/launch/inline_policies\.json\fR\. This file may contain multiple JSON objects of the form {"Effect": "Allow", "Action": [\.\.\.]}\.
 .
 .TP
 \fBterminate\fR

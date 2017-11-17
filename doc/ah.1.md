@@ -115,7 +115,10 @@ environment before any other environment scope commands are attempted.
     Print the currently configured deploy SHA for the current environment.
 
   * `launch`:
-    Interactive command to create AWS resources for a new environment.
+    Interactive command to create AWS resources for a new environment. Extra
+    permissions can be added by specifying them in a file named
+    `.ah/launch/inline_policies.json`. This file may contain multiple JSON
+    objects of the form {"Effect": "Allow", "Action": [...]}.
 
   * `terminate`:
     Destroy all AWS resources associated with the current environment. Only

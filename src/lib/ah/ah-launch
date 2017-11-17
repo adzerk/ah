@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+: $(ah_var AH_APP) $(ah_var AH_ENV) # Make sure these vars are defined.
+
 save_asg_config() {
   printenv |grep -E '^AH_ENV_(ASG|VPC|AZS|LC|SUBNETS)' |sort
 }
@@ -8,7 +10,7 @@ save_lc_config() {
   printenv |grep -E '^AH_ENV_(PUBLIC_IP|CL_VPC_SGS|PROFILE|IMAGE|TYPE|KEY|SGS|USER_DATA)' |sort
 }
 
-role_policy_json=$(cat <<EOT
+role_policy_json=$(cat <<EOT |jt %
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -24,25 +26,32 @@ role_policy_json=$(cat <<EOT
 EOT
 )
 
-role_policy_inline_json=$(cat <<EOT
+default_policies=$(cat <<EOT |jt %
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ec2:DescribeTags"
-      ],
-      "Resource": [
-        "*"
-      ]
-    }
+  "Effect": "Allow",
+  "Action": [
+    "ec2:DescribeTags"
+  ],
+  "Resource": [
+    "*"
   ]
 }
 EOT
 )
 
-: $(ah_var AH_APP) $(ah_var AH_ENV) # Make sure these vars are defined.
+extra_policies=$(cat ./.ah/launch/inline_policies.json 2>/dev/null |jt %)
+
+policies=$({ echo "$default_policies" ; echo "$extra_policies" ; } |paste -sd,)
+
+role_policy_inline_json=$(cat <<EOT |jt %
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    $policies
+  ]
+}
+EOT
+)
 
 ah_info "Loading AWS configuration info..."
 

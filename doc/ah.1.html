@@ -161,7 +161,10 @@ by the last <code>putvar</code>.</p></dd>
 associated with git revision <var>rev</var> (or <code>HEAD</code> if not provided). See the
 <code>SPECIFYING REVISIONS</code> section of the <code>git-rev-parse</code>(1) manual for details.</p></dd>
 <dt class="flush"><code>getsha</code></dt><dd><p>Print the currently configured deploy SHA for the current environment.</p></dd>
-<dt class="flush"><code>launch</code></dt><dd><p>Interactive command to create AWS resources for a new environment.</p></dd>
+<dt class="flush"><code>launch</code></dt><dd><p>Interactive command to create AWS resources for a new environment. Extra
+permissions can be added by specifying them in a file named
+<code>.ah/launch/inline_policies.json</code>. This file may contain multiple JSON
+objects of the form {"Effect": "Allow", "Action": [...]}.</p></dd>
 <dt><code>terminate</code></dt><dd><p>Destroy all AWS resources associated with the current environment. Only
 resources managed by <code>ah</code> will be affected.</p></dd>
 <dt><code>secrets</code> [<code>-a</code>]</dt><dd><p>Print all S3 secrets to which the current environment has access, or if
