@@ -52,6 +52,11 @@ any directory.
     not be necessary unless the index has somehow gotten out of sync with the
     secrets granted).
 
+  * `importkey` [`-n` <name>] <path>:
+    Import SSH public key from <path> into EC2. The `-n` option specifies the
+    key name, which is otherwise taken to be the filename of <path> minus the
+    extension. Supported key file extensions are <pem> and <pub>.
+
 ### Application Commands
 
 These commands operate at the application level and must be executed from an
@@ -63,10 +68,6 @@ are attempted.
     Configure a new application and create associated AWS resources. Input may
     be provided interactively from the terminal or via <stdin>. See **FILES**
     below for a description of the expected format.
-
-  * `region` [<region>]:
-    Set the default AWS region to <region> if <region> is specified, or print
-    the current default region name.
 
   * `push`:
     Push the `HEAD` of the current application git repo and the contents of
@@ -116,9 +117,8 @@ environment before any other environment scope commands are attempted.
 
   * `launch`:
     Interactive command to create AWS resources for a new environment. Extra
-    permissions can be added by specifying them in a file named
-    `.ah/launch/inline_policies.json`. This file may contain multiple JSON
-    objects of the form {"Effect": "Allow", "Action": [...]}.
+    permissions can be added via the `inline_policies.sh` script. See **FILES**
+    below for a description of the expected format.
 
   * `terminate`:
     Destroy all AWS resources associated with the current environment. Only
@@ -169,9 +169,24 @@ eval by the `bash`(1) shell.
     This file contains the name of the current default environment, as set by
     the `env` command.
 
-  * <$APPDIR>`/.ah/region`:
-    This file contains the name of the current default AWS region, as set by
-    the `region` command.
+  * <$APPDIR>`/.ah/launch/inline_policies.sh`:
+    A script that runs as a child of `ah launch` (so has access to all of the
+    environment variables used to configure the env) which may print a sequence
+    of JSON objects (separated by optional whitespace) to <stdout>. These JSON
+    objects are statements that will be added to the env role's inline policy.
+    Each statment must be of the form {"Effect": "Allow", "Action": [...]} (see
+    `launch` above).
+
+    **Note**: If this file does not exist it is assumed that the role's inline
+    policy will be managed externally and **ah** will not update it when running
+    `ah launch` on an env that already exists.
+
+## BASH COMPLETION
+
+Enable `bash`(1) completion for **ah** can be enabled by adding the following
+to your profile:
+
+    . <(ah --setup-bash-completions)
 
 ## COPYRIGHT
 

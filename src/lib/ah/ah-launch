@@ -2,12 +2,18 @@
 
 : $(ah_var AH_APP) $(ah_var AH_ENV) # Make sure these vars are defined.
 
+policies_script=.ah/launch/inline_policies.sh
+
 save_asg_config() {
-  printenv |grep -E '^AH_ENV_(ASG|VPC|AZS|LC|SUBNETS)' |sort
+  printenv |grep -E '^AH_ENV_(ASG|VPC|AZS|LC|SUBNETS)=' |sort
 }
 
 save_lc_config() {
-  printenv |grep -E '^AH_ENV_(PUBLIC_IP|CL_VPC_SGS|PROFILE|IMAGE|TYPE|KEY|SGS|USER_DATA)' |sort
+  printenv |grep -E '^AH_ENV_(PUBLIC_IP|CL_VPC_SGS|PROFILE|IMAGE|TYPE|KEY|SGS|USER_DATA)=' |sort
+}
+
+save_role_config() {
+  role_policy_inline_json "$AH_ENV_INLINE_POLICY" |jq -S . |jt %
 }
 
 role_policy_json=$(cat <<EOT |jt %
@@ -26,7 +32,7 @@ role_policy_json=$(cat <<EOT |jt %
 EOT
 )
 
-default_policies=$(cat <<EOT |jt %
+default_policies=$(cat <<EOT
 {
   "Effect": "Allow",
   "Action": [
@@ -39,19 +45,17 @@ default_policies=$(cat <<EOT |jt %
 EOT
 )
 
-extra_policies=$(cat ./.ah/launch/inline_policies.json 2>/dev/null |jt %)
-
-policies=$({ echo "$default_policies" ; echo "$extra_policies" ; } |grep . |paste -sd,)
-
-role_policy_inline_json=$(cat <<EOT |jt %
+role_policy_inline_json() {
+  local statements=$(echo "$1" |jt % |paste -sd,)
+  cat <<EOT |jt %
 {
   "Version": "2012-10-17",
   "Statement": [
-    $policies
+    $statements
   ]
 }
 EOT
-)
+}
 
 ah_info "Loading AWS configuration info..."
 
@@ -97,6 +101,8 @@ if [[ $AH_ENV_ASG ]]; then
   update=true
   AH_ASG_SAVED=$(save_asg_config)
   AH_LC_SAVED=$(save_lc_config)
+  AH_ROLE_SAVED=$(save_role_config)
+  AH_ENV_INLINE_POLICY_SAVED=$AH_ENV_INLINE_POLICY
 else
   update=false
   ah_check "app policy exists" ah_policy_exists || ah_die "aborted."
@@ -184,17 +190,49 @@ while true; do
   echo
 done
 
+extra_policies=$($policies_script 2>/dev/null)
+policies=$({ echo "$default_policies" ; echo "$extra_policies" ; } |jt % |paste -sd '')
+export AH_ENV_INLINE_POLICY=$policies
+
 AH_ASG_NEW=$(save_asg_config)
 AH_LC_NEW=$(save_lc_config)
+AH_ROLE_NEW=$(save_role_config)
 
-[[ $AH_ASG_NEW != $AH_ASG_SAVED ]] && asg_changed=true || asg_changed=false
-[[ $AH_LC_NEW  != $AH_LC_SAVED  ]] && lc_changed=true  || lc_changed=false
+[[ "$AH_ASG_NEW" != "$AH_ASG_SAVED" ]] && asg_changed=true || asg_changed=false
+[[ "$AH_LC_NEW"  != "$AH_LC_SAVED"  ]] && lc_changed=true  || lc_changed=false
+
+# Only enable policy updating if the json file exists. Otherwise assume that
+# role policies are managed externally.
+if [[ -f $policies_script ]] && [[ "$AH_ROLE_NEW"  != "$AH_ROLE_SAVED" ]]; then
+  role_changed=true
+else
+  role_changed=false
+fi
+
+# Specifying both AZs and subnets is redundant and a cause of validation errors.
+[[ $AH_ENV_SUBNETS ]] && AH_ENV_AZS=
 
 if ! $lc_changed; then
+  echo
   read -sn 1 -p "$(ah_bold "Launch config settings unchanged. Update launch config anyway? [")yN$(ah_bold "] ")" approve
   [[ "$approve" == "y" ]] && lc_changed=true
   echo
 fi
+
+if $update && $role_changed; then
+  echo
+  which colordiff >/dev/null 2>&1 && diff=colordiff || diff=diff
+  $diff --side-by-side \
+    <(role_policy_inline_json "$AH_ENV_INLINE_POLICY_SAVED" |jq -S .) \
+    <(role_policy_inline_json "$AH_ENV_INLINE_POLICY" |jq -S .)
+  echo
+  read -sn 1 -p "$(ah_bold "Update role inline policies (see diff above)? [")yN$(ah_bold "] ")" approve
+  [[ "$approve" == "y" ]] || role_changed=false
+  echo
+fi
+
+echo
+exit
 
 if ! $update; then
   ah_try -m "Creating role..." \
@@ -208,13 +246,6 @@ if ! $update; then
     aws iam attach-role-policy \
       --role-name $AH_ENV \
       --policy-arn $(ah_policy_arn ah/$AH_APP) \
-      > /dev/null
-
-  ah_try -m "Creating inline policy..." \
-    aws iam put-role-policy \
-      --role-name $AH_ENV \
-      --policy-name ec2-describe-tags \
-      --policy-document "$role_policy_inline_json" \
       > /dev/null
 
   ah_try -m "Creating instance profile..." \
@@ -245,7 +276,16 @@ if ! $update; then
           --group-name $AH_ENV \
           --description "Ah security group for the $AH_ENV environment, $AH_APP application." \
           | jt GroupId %)
+
       [[ ! $AH_ENV_SGS ]] && ah_die "could not create security group"
+
+      aws ec2 create-tags \
+        --resources $AH_ENV_SGS \
+        --tags Key=Name,Value=${AH_ENV} \
+               Key=BillingGroup,Value=${AH_BILLING_GROUP} \
+               Key=BillingProject,Value=${AH_BILLING_PROJECT} \
+               Key=AhApplication,Value=$AH_APP \
+               Key=AhEnvironment,Value=$AH_ENV
     fi
   fi
 
@@ -259,6 +299,14 @@ if ! $update; then
       |jt GroupId %)
 
     [[ ! $created_sgs ]] && ah_die "could not create security group"
+
+    aws ec2 create-tags \
+      --resources $created_sgs \
+      --tags Key=Name,Value=${AH_ENV}${AH_ENV_CL_VPC:+-classic-link} \
+             Key=BillingGroup,Value=${AH_BILLING_GROUP} \
+             Key=BillingProject,Value=${AH_BILLING_PROJECT} \
+             Key=AhApplication,Value=$AH_APP \
+             Key=AhEnvironment,Value=$AH_ENV
 
     if [[ $AH_ENV_CL_VPC ]]; then
       AH_ENV_CL_VPC_SGS=$created_sgs
@@ -289,6 +337,16 @@ if ! $update || $lc_changed; then
       > /dev/null
 fi
 
+if ! $update || $role_changed; then
+  $update && op=Updating || op=Creating
+  ah_try -m "$op inline policy for IAM role..." \
+    aws iam put-role-policy \
+      --role-name $AH_ENV \
+      --policy-name ec2-describe-tags \
+      --policy-document "$(role_policy_inline_json "$AH_ENV_INLINE_POLICY")" \
+      > /dev/null
+fi
+
 if ! $update; then
   ah_try -m "Creating autoscaling group..." \
     aws autoscaling create-auto-scaling-group \
@@ -298,10 +356,10 @@ if ! $update; then
       --max-size 0 \
       --desired-capacity 0 \
       --tags "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=AhApplication,Value=$AH_APP" \
-            "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=AhEnvironment,Value=$AH_ENV" \
-            "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=Name,Value=$AH_ENV" \
-            "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingGroup,Value=$AH_BILLING_GROUP" \
-            "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingProject,Value=$AH_BILLING_PROJECT" \
+             "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=AhEnvironment,Value=$AH_ENV" \
+             "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=Name,Value=$AH_ENV" \
+             "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingGroup,Value=$AH_BILLING_GROUP" \
+             "ResourceId=$AH_ENV,ResourceType=auto-scaling-group,Key=BillingProject,Value=$AH_BILLING_PROJECT" \
       ${AH_ENV_SUBNETS:+--vpc-zone-identifier $(echo $AH_ENV_SUBNETS |tr -s '[ ]' '[,]')} \
       ${AH_ENV_AZS:+--availability-zones $AH_ENV_AZS} \
       > /dev/null

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+while getopts u o; do
+  case $o in
+    n) name=$OPTARG ;;
+    *) ah_die "usage: $AH importkey [-n <name>] <pubkeyfile>" ;;
+  esac
+done
+shift $((OPTIND-1))
+
+[[ $# -lt 1 ]] && ah_die "ssh public key file required"
+
+path=$1
+file=$(basename "$path")
+stem=$(echo "$file" |sed 's@\..*@@')
+ext=$(echo "$file" |sed 's@.*\.@@')
+name=${name:-$stem}
+
+case "$ext" in
+  pub) key=$(cat "$path") ;;
+  pem) key=$(ssh-keygen -f "$path" -y) ;;
+  *) ah_die "unsupported public key file extension: '$ext'" ;;
+esac
+
+aws ec2 import-key-pair \
+  --key-name "$name" \
+  --public-key-material "$key"

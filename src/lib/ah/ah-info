@@ -3,4 +3,5 @@
 : $(ah_var AH_ENV)
 
 . <(ah_env_info $AH_ENV |sed 's@^@export @')
+echo "||$AH_ENV_INLINE_POLICY||"
 printenv |grep ^AH_

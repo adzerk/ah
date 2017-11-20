@@ -64,6 +64,7 @@
     <a href="#ENVIRONMENT">ENVIRONMENT</a>
     <a href="#CONFIG">CONFIG</a>
     <a href="#FILES">FILES</a>
+    <a href="#BASH-COMPLETION">BASH COMPLETION</a>
     <a href="#COPYRIGHT">COPYRIGHT</a>
     <a href="#SEE-ALSO">SEE ALSO</a>
   </div>
@@ -115,6 +116,9 @@ environments that have been granted access to S3 secret variable files. The
 <code>-u</code> option updates the grants index for the current environment (should
 not be necessary unless the index has somehow gotten out of sync with the
 secrets granted).</p></dd>
+<dt><code>importkey</code> [<code>-n</code> <var>name</var>] <var>path</var></dt><dd><p>Import SSH public key from <var>path</var> into EC2. The <code>-n</code> option specifies the
+key name, which is otherwise taken to be the filename of <var>path</var> minus the
+extension. Supported key file extensions are <var>pem</var> and <var>pub</var>.</p></dd>
 </dl>
 
 
@@ -129,8 +133,6 @@ are attempted.</p>
 <dt class="flush"><code>init</code></dt><dd><p>Configure a new application and create associated AWS resources. Input may
 be provided interactively from the terminal or via <var>stdin</var>. See <strong>FILES</strong>
 below for a description of the expected format.</p></dd>
-<dt><code>region</code> [<var>region</var>]</dt><dd><p>Set the default AWS region to <var>region</var> if <var>region</var> is specified, or print
-the current default region name.</p></dd>
 <dt class="flush"><code>push</code></dt><dd><p>Push the <code>HEAD</code> of the current application git repo and the contents of
 the target directory to S3.</p></dd>
 <dt class="flush"><code>shas</code></dt><dd><p>Print the list of SHAs that have been uploaded via the <code>push</code> command for
@@ -162,9 +164,8 @@ associated with git revision <var>rev</var> (or <code>HEAD</code> if not provide
 <code>SPECIFYING REVISIONS</code> section of the <code>git-rev-parse</code>(1) manual for details.</p></dd>
 <dt class="flush"><code>getsha</code></dt><dd><p>Print the currently configured deploy SHA for the current environment.</p></dd>
 <dt class="flush"><code>launch</code></dt><dd><p>Interactive command to create AWS resources for a new environment. Extra
-permissions can be added by specifying them in a file named
-<code>.ah/launch/inline_policies.json</code>. This file may contain multiple JSON
-objects of the form {"Effect": "Allow", "Action": [...]}.</p></dd>
+permissions can be added via the <code>inline_policies.sh</code> script. See <strong>FILES</strong>
+below for a description of the expected format.</p></dd>
 <dt><code>terminate</code></dt><dd><p>Destroy all AWS resources associated with the current environment. Only
 resources managed by <code>ah</code> will be affected.</p></dd>
 <dt><code>secrets</code> [<code>-a</code>]</dt><dd><p>Print all S3 secrets to which the current environment has access, or if
@@ -211,10 +212,26 @@ command. Settings in this file only apply to this application. This file
 <strong>must</strong> be committed to the git repository for the application.</p></dd>
 <dt><var>$APPDIR</var><code>/.ah/env</code></dt><dd><p>This file contains the name of the current default environment, as set by
 the <code>env</code> command.</p></dd>
-<dt><var>$APPDIR</var><code>/.ah/region</code></dt><dd><p>This file contains the name of the current default AWS region, as set by
-the <code>region</code> command.</p></dd>
+<dt><var>$APPDIR</var><code>/.ah/launch/inline_policies.sh</code></dt><dd><p>A script that runs as a child of <code>ah launch</code> (so has access to all of the
+environment variables used to configure the env) which may print a sequence
+of JSON objects (separated by optional whitespace) to <var>stdout</var>. These JSON
+objects are statements that will be added to the env role's inline policy.
+Each statment must be of the form {"Effect": "Allow", "Action": [...]} (see
+<code>launch</code> above).</p>
+
+<p><strong>Note</strong>: If this file does not exist it is assumed that the role's inline
+policy will be managed externally and <strong>ah</strong> will not update it when running
+<code>ah launch</code> on an env that already exists.</p></dd>
 </dl>
 
+
+<h2 id="BASH-COMPLETION">BASH COMPLETION</h2>
+
+<p>Enable <code>bash</code>(1) completion for <strong>ah</strong> can be enabled by adding the following
+to your profile:</p>
+
+<pre><code>. &lt;(ah --setup-bash-completions)
+</code></pre>
 
 <h2 id="COPYRIGHT">COPYRIGHT</h2>
 

@@ -374,7 +374,7 @@ ah_asg_info() {
 }
 
 ah_env_info() {
-  local name=$1 lc_name lc_info asg_info subnet vpc
+  local name=$1 lc_name lc_info asg_info subnet vpc policy
 
   asg_info=$(aws autoscaling describe-auto-scaling-groups \
     --auto-scaling-group-names $name)
@@ -387,22 +387,28 @@ ah_env_info() {
     lc_info=$(aws autoscaling describe-launch-configurations \
       --launch-configuration-names $lc_name)
   fi
+  policy=$(aws iam get-role-policy \
+    --role-name $name \
+    --policy-name ec2-describe-tags \
+    |jt PolicyDocument Statement % \
+    |paste -sd '')
 
   cat <<EOT
 AH_ENV_ASG=$(printf "%q" "$(echo "$asg_info" |jt . AutoScalingGroupName %)")
-AH_ENV_VPC='$vpc'
-AH_ENV_AZS='$(echo "$asg_info" |jt . AvailabilityZones % |xargs echo)'
-AH_ENV_SUBNETS='$(echo "$asg_info" |jt . VPCZoneIdentifier % |tr '[,]' '[ ]')'
-AH_ENV_LC='$lc_name'
-AH_ENV_PUBLIC_IP='$(echo "$lc_info" |jt . AssociatePublicIpAddress % |grep true)'
-AH_ENV_SGS='$(echo "$lc_info" |jt . SecurityGroups % |xargs echo)'
-AH_ENV_CL_VPC='$(echo "$lc_info" |jt . ClassicLinkVPCId %)'
-AH_ENV_CL_VPC_SGS='$(echo "$lc_info" |jt . ClassicLinkVPCSecurityGroups % |xargs echo)'
-AH_ENV_PROFILE='$(echo "$lc_info" |jt . IamInstanceProfile %)'
-AH_ENV_IMAGE='$(echo "$lc_info" |jt . ImageId %)'
-AH_ENV_TYPE='$(echo "$lc_info" |jt . InstanceType %)'
-AH_ENV_KEY='$(echo "$lc_info" |jt . KeyName %)'
-AH_ENV_USER_DATA='$(echo "$lc_info" |jt . UserData %)'
+AH_ENV_VPC=$(printf "%q" "$vpc")
+AH_ENV_AZS=$(printf "%q" "$(echo "$asg_info" |jt . AvailabilityZones % |xargs echo)")
+AH_ENV_SUBNETS=$(printf "%q" "$(echo "$asg_info" |jt . VPCZoneIdentifier % |tr '[,]' '[ ]')")
+AH_ENV_LC=$(printf "%q" "$lc_name")
+AH_ENV_PUBLIC_IP=$(printf "%q" "$(echo "$lc_info" |jt . AssociatePublicIpAddress % |grep true)")
+AH_ENV_SGS=$(printf "%q" "$(echo "$lc_info" |jt . SecurityGroups % |xargs echo)")
+AH_ENV_CL_VPC=$(printf "%q" "$(echo "$lc_info" |jt . ClassicLinkVPCId %)")
+AH_ENV_CL_VPC_SGS=$(printf "%q" "$(echo "$lc_info" |jt . ClassicLinkVPCSecurityGroups % |xargs echo)")
+AH_ENV_PROFILE=$(printf "%q" "$(echo "$lc_info" |jt . IamInstanceProfile %)")
+AH_ENV_IMAGE=$(printf "%q" "$(echo "$lc_info" |jt . ImageId %)")
+AH_ENV_TYPE=$(printf "%q" "$(echo "$lc_info" |jt . InstanceType %)")
+AH_ENV_KEY=$(printf "%q" "$(echo "$lc_info" |jt . KeyName %)")
+AH_ENV_USER_DATA=$(printf "%q" "$(echo "$lc_info" |jt . UserData %)")
+AH_ENV_INLINE_POLICY=$(printf "%q" "$policy")
 EOT
 }
 
@@ -466,7 +472,7 @@ ah_select() {
                              $1 == %d && $4 == "" {print $2 "\t" $3 "\tyes"}
                              $1 != %d {print $2 "\t" $3 "\t" %s}' $num $num $num $multi 2>/dev/null)")
 
-    eval "${1}='$(echo $(echo "$opts" |grep 'yes$' |cut -f1))'"
+    eval "export ${1}='$(echo $(echo "$opts" |grep 'yes$' |cut -f1))'"
     true
   else
     false
@@ -489,5 +495,5 @@ ah_text_input() {
   read -r tmp
   [[ -z "$tmp" ]] && tmp=${!1}
 
-  eval "${1}=$(printf '%q' "$tmp")"
+  eval "export ${1}=$(printf '%q' "$tmp")"
 }

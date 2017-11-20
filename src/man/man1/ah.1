@@ -50,16 +50,16 @@ Delete the S3 secret file for the variable \fIsecret\fR\.
 \fBgrants\fR [\fB\-u\fR]
 Print the table of S3 secret variable and \fBah\fR environment names for all environments that have been granted access to S3 secret variable files\. The \fB\-u\fR option updates the grants index for the current environment (should not be necessary unless the index has somehow gotten out of sync with the secrets granted)\.
 .
+.TP
+\fBimportkey\fR [\fB\-n\fR \fIname\fR] \fIpath\fR
+Import SSH public key from \fIpath\fR into EC2\. The \fB\-n\fR option specifies the key name, which is otherwise taken to be the filename of \fIpath\fR minus the extension\. Supported key file extensions are \fIpem\fR and \fIpub\fR\.
+.
 .SS "Application Commands"
 These commands operate at the application level and must be executed from an application git directory\. The \fBinit\fR command must be executed to initialize the application before any other application or environment scope commands are attempted\.
 .
 .TP
 \fBinit\fR
 Configure a new application and create associated AWS resources\. Input may be provided interactively from the terminal or via \fIstdin\fR\. See \fBFILES\fR below for a description of the expected format\.
-.
-.TP
-\fBregion\fR [\fIregion\fR]
-Set the default AWS region to \fIregion\fR if \fIregion\fR is specified, or print the current default region name\.
 .
 .TP
 \fBpush\fR
@@ -106,7 +106,7 @@ Print the currently configured deploy SHA for the current environment\.
 .
 .TP
 \fBlaunch\fR
-Interactive command to create AWS resources for a new environment\. Extra permissions can be added by specifying them in a file named \fB\.ah/launch/inline_policies\.json\fR\. This file may contain multiple JSON objects of the form {"Effect": "Allow", "Action": [\.\.\.]}\.
+Interactive command to create AWS resources for a new environment\. Extra permissions can be added via the \fBinline_policies\.sh\fR script\. See \fBFILES\fR below for a description of the expected format\.
 .
 .TP
 \fBterminate\fR
@@ -153,8 +153,24 @@ This file contains the application configuration, as set by the \fBinit\fR comma
 This file contains the name of the current default environment, as set by the \fBenv\fR command\.
 .
 .TP
-\fI$APPDIR\fR\fB/\.ah/region\fR
-This file contains the name of the current default AWS region, as set by the \fBregion\fR command\.
+\fI$APPDIR\fR\fB/\.ah/launch/inline_policies\.sh\fR
+A script that runs as a child of \fBah launch\fR (so has access to all of the environment variables used to configure the env) which may print a sequence of JSON objects (separated by optional whitespace) to \fIstdout\fR\. These JSON objects are statements that will be added to the env role\'s inline policy\. Each statment must be of the form {"Effect": "Allow", "Action": [\.\.\.]} (see \fBlaunch\fR above)\.
+.
+.IP
+\fBNote\fR: If this file does not exist it is assumed that the role\'s inline policy will be managed externally and \fBah\fR will not update it when running \fBah launch\fR on an env that already exists\.
+.
+.SH "BASH COMPLETION"
+Enable \fBbash\fR(1) completion for \fBah\fR can be enabled by adding the following to your profile:
+.
+.IP "" 4
+.
+.nf
+
+\&\. <(ah \-\-setup\-bash\-completions)
+.
+.fi
+.
+.IP "" 0
 .
 .SH "COPYRIGHT"
 Copyright \(co 2017 Adzerk \fB<engineering@adzerk\.com>\fR, distributed under the Eclipse Public License, version 1\.0\. This is free software: you are free to change and redistribute it\. There is NO WARRANTY, to the extent permitted by law\.

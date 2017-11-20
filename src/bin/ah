@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 
+if [[ "$1" == "--setup-bash-completions" ]]; then
+  cat <<EOT
+_ah_completions() {
+  local c=\${COMP_WORDS[COMP_CWORD]}
+  local w=\$(ah --completions "\${COMP_WORDS[@]}")
+  COMPREPLY=( \$(compgen -W "\$w" -- \$c) )
+}
+complete -F _ah_completions ah
+EOT
+exit
+fi
+
 # Default master region (can override with `ah init`)
 export AH_MASTER_REGION=us-east-1
 
@@ -17,9 +29,17 @@ export PATH="${AH_LIB}:$PATH"
 export my_pid=$$   # so subshells can kill this shell -- poor man's exceptions
 trap "exit 1" USR1 # signal so exceptions can change exit status on abort
 
+export completions=false
+
+# Completions mode -- ah just generates wordlists for shell tab-completions.
+if [[ $1 == --completions ]]; then
+  completions=true
+  shift 2
+fi
+
 # Print an error message to stderr and exit with nonzero status.
 ah_die() {
-  [[ $# -gt 0 ]] && echo "$AH:" "$@" 1>&2
+  [[ $# -gt 0 ]] && ! $completions && echo "$AH:" "$@" 1>&2
   kill -s USR1 $my_pid
   exit 1
 }
@@ -59,8 +79,10 @@ ah_load_extension() {
 
 # Ensure that AWS credentials are available
 
-aws configure list |grep -E '^(access|secret)_key' |grep -q '<not set>' \
-  && ah_die "AWS credentials not available"
+if [[ $# -gt 0 ]]; then
+  aws configure list |grep -E '^(access|secret)_key' |grep -q '<not set>' \
+    && ah_die "AWS credentials not available"
+fi
 
 # Load AH config script
 
@@ -76,17 +98,24 @@ ah_load_conf .ah/env
 ah_load_conf .ah/region '^AWS_DEFAULT_REGION='
 
 # Bootstrapping ###############################################################
+
 if [[ $# -gt 0 ]]; then
   AH_CMD="$1"
   AH_DOIT=$(which ah-$AH_CMD)
   shift 1
 
   if [[ ! -e $AH_DOIT ]]; then
-    ah_die "no such command: $AH_CMD"
+    if $completions; then
+      compgen -c |sort |grep ^ah- |sed s/^...//
+    else
+      ah_die "no such command: $AH_CMD"
+    fi
   fi
 
   . $AH_LIB/.fns
-  . $AH_DOIT
+  if ! $completions || [[ $AH_CMD == env ]]; then
+    . $AH_DOIT
+  fi
 else
   compgen -c |sort |grep ^ah- |sed s/^...//
 fi
