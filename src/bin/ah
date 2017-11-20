@@ -113,6 +113,8 @@ if [[ $# -gt 0 ]]; then
   fi
 
   . $AH_LIB/.fns
+
+  # Hardcode in the list of commands that support 2nd level completions for now.
   if ! $completions || [[ $AH_CMD == env ]]; then
     . $AH_DOIT
   fi
