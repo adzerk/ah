@@ -232,7 +232,6 @@ if $update && $role_changed; then
 fi
 
 echo
-exit
 
 if ! $update; then
   ah_try -m "Creating role..." \
