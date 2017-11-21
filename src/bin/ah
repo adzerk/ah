@@ -116,7 +116,10 @@ if [[ $# -gt 0 ]]; then
 
   # Hardcode in the list of commands that support 2nd level completions for now.
   if ! $completions || [[ $AH_CMD == env ]]; then
+    export AH_HOOKS=.ah/hooks/$AH_CMD
     . $AH_DOIT
+    ret=$?
+    [[ -f $AH_HOOKS/after.sh ]] && . $AH_HOOKS/after.sh || exit $ret
   fi
 else
   compgen -c |sort |grep ^ah- |sed s/^...//

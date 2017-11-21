@@ -19,6 +19,9 @@ Commands are organized by scope: global, application, and environment.
 These commands are not specific to any application. They may be executed from
 any directory.
 
+  * `actions`:
+    Print a list of all AWS service actions. Useful when creating IAM policies.
+
   * `orgs`:
     Print a listing of existing org names.
 
@@ -116,9 +119,7 @@ environment before any other environment scope commands are attempted.
     Print the currently configured deploy SHA for the current environment.
 
   * `launch`:
-    Interactive command to create AWS resources for a new environment. Extra
-    permissions can be added via the `inline_policies.sh` script. See **FILES**
-    below for a description of the expected format.
+    Interactive command to create AWS resources for a new environment.
 
   * `terminate`:
     Destroy all AWS resources associated with the current environment. Only
@@ -154,6 +155,12 @@ The following environment variables must be set before using `ah`:
     `$HOME/.ah/extensions`. For example:
     `ah_load_extension git@github.com:yourorg/cool-ah-extensions 2.0`
 
+## HOOKS
+
+If a <$APPDIR>`/.ah/hooks/`<command>`/after.sh` file exists it will be sourced
+after the <command> has completed. It will have access to all of the variables
+in the command's scope.
+
 ## FILES
 
 The following configuration files are used to configure the `ah` environment.
@@ -168,18 +175,6 @@ eval by the `bash`(1) shell.
   * <$APPDIR>`/.ah/env`:
     This file contains the name of the current default environment, as set by
     the `env` command.
-
-  * <$APPDIR>`/.ah/launch/inline_policies.sh`:
-    A script that runs as a child of `ah launch` (so has access to all of the
-    environment variables used to configure the env) which may print a sequence
-    of JSON objects (separated by optional whitespace) to <stdout>. These JSON
-    objects are statements that will be added to the env role's inline policy.
-    Each statment must be of the form {"Effect": "Allow", "Action": [...]} (see
-    `launch` above).
-
-    **Note**: If this file does not exist it is assumed that the role's inline
-    policy will be managed externally and **ah** will not update it when running
-    `ah launch` on an env that already exists.
 
 ## BASH COMPLETION
 

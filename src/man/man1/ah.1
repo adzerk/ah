@@ -19,6 +19,10 @@ Commands are organized by scope: global, application, and environment\.
 These commands are not specific to any application\. They may be executed from any directory\.
 .
 .TP
+\fBactions\fR
+Print a list of all AWS service actions\. Useful when creating IAM policies\.
+.
+.TP
 \fBorgs\fR
 Print a listing of existing org names\.
 .
@@ -106,7 +110,7 @@ Print the currently configured deploy SHA for the current environment\.
 .
 .TP
 \fBlaunch\fR
-Interactive command to create AWS resources for a new environment\. Extra permissions can be added via the \fBinline_policies\.sh\fR script\. See \fBFILES\fR below for a description of the expected format\.
+Interactive command to create AWS resources for a new environment\.
 .
 .TP
 \fBterminate\fR
@@ -141,6 +145,9 @@ A convenience function \fBah_load_extension repo ref\fR is provided\. This will 
 .
 .IP "" 0
 .
+.SH "HOOKS"
+If a \fI$APPDIR\fR\fB/\.ah/hooks/\fR\fIcommand\fR\fB/after\.sh\fR file exists it will be sourced after the \fIcommand\fR has completed\. It will have access to all of the variables in the command\'s scope\.
+.
 .SH "FILES"
 The following configuration files are used to configure the \fBah\fR environment\. The format of these files is one \fINAME\fR=\fIvalue\fR pair per line, suitable for eval by the \fBbash\fR(1) shell\.
 .
@@ -151,13 +158,6 @@ This file contains the application configuration, as set by the \fBinit\fR comma
 .TP
 \fI$APPDIR\fR\fB/\.ah/env\fR
 This file contains the name of the current default environment, as set by the \fBenv\fR command\.
-.
-.TP
-\fI$APPDIR\fR\fB/\.ah/launch/inline_policies\.sh\fR
-A script that runs as a child of \fBah launch\fR (so has access to all of the environment variables used to configure the env) which may print a sequence of JSON objects (separated by optional whitespace) to \fIstdout\fR\. These JSON objects are statements that will be added to the env role\'s inline policy\. Each statment must be of the form {"Effect": "Allow", "Action": [\.\.\.]} (see \fBlaunch\fR above)\.
-.
-.IP
-\fBNote\fR: If this file does not exist it is assumed that the role\'s inline policy will be managed externally and \fBah\fR will not update it when running \fBah launch\fR on an env that already exists\.
 .
 .SH "BASH COMPLETION"
 Enable \fBbash\fR(1) completion for \fBah\fR can be enabled by adding the following to your profile:

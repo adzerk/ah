@@ -1,4 +1,4 @@
-.PHONY: all clean install uninstall tools instance-types
+.PHONY: all clean install uninstall tools instance-types aws-actions
 
 SHELL  := /bin/bash
 PREFIX ?= /usr/local
@@ -46,7 +46,7 @@ src/lib/ah/aws-conditions-context-keys.txt:
 				|hxselect -cs '\n' ul.itemizedlist li p code \
 				|grep -v '^<' \
 				|tr '[:]' '[\t]'; \
-		done > $@
+		done |sort > $@
 
 src/lib/ah/instance-types.txt:
 	curl -s $(AWS_SPOT_HIST) \
@@ -57,6 +57,8 @@ src/lib/ah/instance-types.txt:
 		> $@
 
 instance-types: src/lib/ah/instance-types.txt
+
+aws-actions: src/lib/ah/aws-actions.txt
 
 tools: tools/json-table.tar.gz
 

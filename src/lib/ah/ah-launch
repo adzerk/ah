@@ -2,8 +2,6 @@
 
 : $(ah_var AH_APP) $(ah_var AH_ENV) # Make sure these vars are defined.
 
-policies_script=.ah/launch/inline_policies.sh
-
 save_asg_config() {
   printenv |grep -E '^AH_ENV_(ASG|VPC|AZS|LC|SUBNETS)=' |sort
 }
@@ -12,9 +10,7 @@ save_lc_config() {
   printenv |grep -E '^AH_ENV_(PUBLIC_IP|CL_VPC_SGS|PROFILE|IMAGE|TYPE|KEY|SGS|USER_DATA)=' |sort
 }
 
-save_role_config() {
-  role_policy_inline_json "$AH_ENV_INLINE_POLICY" |jq -S . |jt %
-}
+ah_info "Loading AWS configuration info..."
 
 role_policy_json=$(cat <<EOT |jt %
 {
@@ -31,33 +27,6 @@ role_policy_json=$(cat <<EOT |jt %
 }
 EOT
 )
-
-default_policies=$(cat <<EOT
-{
-  "Effect": "Allow",
-  "Action": [
-    "ec2:DescribeTags"
-  ],
-  "Resource": [
-    "*"
-  ]
-}
-EOT
-)
-
-role_policy_inline_json() {
-  local statements=$(echo "$1" |jt % |paste -sd,)
-  cat <<EOT |jt %
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    $statements
-  ]
-}
-EOT
-}
-
-ah_info "Loading AWS configuration info..."
 
 avail_azs=$(aws ec2 describe-availability-zones \
   |jt AvailabilityZones [ ZoneName % ])
@@ -98,19 +67,18 @@ ah_info "Loading env configuration info..."
 ah_success "OK.\n"
 
 if [[ $AH_ENV_ASG ]]; then
-  update=true
+  export AH_LAUNCH_UPDATE=true
   AH_ASG_SAVED=$(save_asg_config)
   AH_LC_SAVED=$(save_lc_config)
   AH_ROLE_SAVED=$(save_role_config)
-  AH_ENV_INLINE_POLICY_SAVED=$AH_ENV_INLINE_POLICY
 else
-  update=false
+  export AH_LAUNCH_UPDATE=false
   ah_check "app policy exists" ah_policy_exists || ah_die "aborted."
   ah_check "role does not already exist" ah_not ah_role_exists $AH_ENV || ah_die "aborted."
   ah_check "instance profile does not already exist" ah_not ah_instance_profile_exists $AH_ENV || ah_die "aborted."
 fi
 
-if ! $update; then
+if ! $AH_LAUNCH_UPDATE; then
   while ah_select -p "Org to use as a template? " template "$avail_orgs"; do
     [[ $template ]] && break
   done
@@ -122,7 +90,7 @@ if ! $update; then
 fi
 
 while true; do
-  if ! $update; then
+  if ! $AH_LAUNCH_UPDATE; then
     while ah_select -p "Launch into VPC? " AH_ENV_VPC "$avail_vpcs"; do
       [[ $AH_ENV_VPC ]] && break
     done
@@ -131,7 +99,7 @@ while true; do
   ah_select -p "Use existing ${AH_ENV_VPC:+VPC }security group? " AH_ENV_SGS "$(vpc_avail_sgs $AH_ENV_VPC)"
 
   if [[ ! $AH_ENV_VPC ]]; then
-    if ! $update; then
+    if ! $AH_LAUNCH_UPDATE; then
       while ah_select -p "Enable classic link to VPC? " AH_ENV_CL_VPC "$avail_vpcs"; do
         [[ $AH_ENV_CL_VPC ]] && break
       done
@@ -159,7 +127,7 @@ while true; do
     ah_select -v AH_ENV_PUBLIC_IP "true	assign public IPs to instances"
   fi
 
-  if ! $update; then
+  if ! $AH_LAUNCH_UPDATE; then
     ah_text_input -p "Billing group? " AH_BILLING_GROUP
     ah_text_input -p "Billing project? " AH_BILLING_PROJECT
   fi
@@ -190,24 +158,11 @@ while true; do
   echo
 done
 
-extra_policies=$($policies_script 2>/dev/null)
-policies=$({ echo "$default_policies" ; echo "$extra_policies" ; } |jt % |paste -sd '')
-export AH_ENV_INLINE_POLICY=$policies
-
 AH_ASG_NEW=$(save_asg_config)
 AH_LC_NEW=$(save_lc_config)
-AH_ROLE_NEW=$(save_role_config)
 
 [[ "$AH_ASG_NEW" != "$AH_ASG_SAVED" ]] && asg_changed=true || asg_changed=false
 [[ "$AH_LC_NEW"  != "$AH_LC_SAVED"  ]] && lc_changed=true  || lc_changed=false
-
-# Only enable policy updating if the json file exists. Otherwise assume that
-# role policies are managed externally.
-if [[ -f $policies_script ]] && [[ "$AH_ROLE_NEW"  != "$AH_ROLE_SAVED" ]]; then
-  role_changed=true
-else
-  role_changed=false
-fi
 
 # Specifying both AZs and subnets is redundant and a cause of validation errors.
 [[ $AH_ENV_SUBNETS ]] && AH_ENV_AZS=
@@ -219,21 +174,9 @@ if ! $lc_changed; then
   echo
 fi
 
-if $update && $role_changed; then
-  echo
-  which colordiff >/dev/null 2>&1 && diff=colordiff || diff=diff
-  $diff --side-by-side \
-    <(role_policy_inline_json "$AH_ENV_INLINE_POLICY_SAVED" |jq -S .) \
-    <(role_policy_inline_json "$AH_ENV_INLINE_POLICY" |jq -S .)
-  echo
-  read -sn 1 -p "$(ah_bold "Update role inline policies (see diff above)? [")yN$(ah_bold "] ")" approve
-  [[ "$approve" == "y" ]] || role_changed=false
-  echo
-fi
-
 echo
 
-if ! $update; then
+if ! $AH_LAUNCH_UPDATE; then
   ah_try -m "Creating role..." \
     aws iam create-role \
       --path /ah/ \
@@ -316,7 +259,7 @@ if ! $update; then
   echo done.
 fi
 
-if ! $update || $lc_changed; then
+if ! $AH_LAUNCH_UPDATE || $lc_changed; then
   AH_ENV_LC_NEW="${AH_ENV}-$(date +'%Y-%m-%d-%H%M%S-%s')"
   AH_ENV_PUBLIC_IP=${AH_ENV_PUBLIC_IP:+--associate-public-ip-address}
   AH_ENV_PUBLIC_IP=${AH_ENV_PUBLIC_IP:---no-associate-public-ip-address}
@@ -336,17 +279,7 @@ if ! $update || $lc_changed; then
       > /dev/null
 fi
 
-if ! $update || $role_changed; then
-  $update && op=Updating || op=Creating
-  ah_try -m "$op inline policy for IAM role..." \
-    aws iam put-role-policy \
-      --role-name $AH_ENV \
-      --policy-name ec2-describe-tags \
-      --policy-document "$(role_policy_inline_json "$AH_ENV_INLINE_POLICY")" \
-      > /dev/null
-fi
-
-if ! $update; then
+if ! $AH_LAUNCH_UPDATE; then
   ah_try -m "Creating autoscaling group..." \
     aws autoscaling create-auto-scaling-group \
       --auto-scaling-group-name $AH_ENV \

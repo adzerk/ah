@@ -63,6 +63,7 @@
     <a href="#COMMANDS">COMMANDS</a>
     <a href="#ENVIRONMENT">ENVIRONMENT</a>
     <a href="#CONFIG">CONFIG</a>
+    <a href="#HOOKS">HOOKS</a>
     <a href="#FILES">FILES</a>
     <a href="#BASH-COMPLETION">BASH COMPLETION</a>
     <a href="#COPYRIGHT">COPYRIGHT</a>
@@ -99,6 +100,7 @@ services hosted on Amazon Web Services (AWS).</p>
 any directory.</p>
 
 <dl>
+<dt class="flush"><code>actions</code></dt><dd><p>Print a list of all AWS service actions. Useful when creating IAM policies.</p></dd>
 <dt class="flush"><code>orgs</code></dt><dd><p>Print a listing of existing org names.</p></dd>
 <dt><code>getorg</code> <var>org</var></dt><dd><p>Print the config settings associated with <var>org</var>.</p></dd>
 <dt><code>putorg</code> <var>org</var></dt><dd><p>Create or update the org named <var>org</var>, starting with a copy of <var>template</var> if
@@ -163,9 +165,7 @@ by the last <code>putvar</code>.</p></dd>
 associated with git revision <var>rev</var> (or <code>HEAD</code> if not provided). See the
 <code>SPECIFYING REVISIONS</code> section of the <code>git-rev-parse</code>(1) manual for details.</p></dd>
 <dt class="flush"><code>getsha</code></dt><dd><p>Print the currently configured deploy SHA for the current environment.</p></dd>
-<dt class="flush"><code>launch</code></dt><dd><p>Interactive command to create AWS resources for a new environment. Extra
-permissions can be added via the <code>inline_policies.sh</code> script. See <strong>FILES</strong>
-below for a description of the expected format.</p></dd>
+<dt class="flush"><code>launch</code></dt><dd><p>Interactive command to create AWS resources for a new environment.</p></dd>
 <dt><code>terminate</code></dt><dd><p>Destroy all AWS resources associated with the current environment. Only
 resources managed by <code>ah</code> will be affected.</p></dd>
 <dt><code>secrets</code> [<code>-a</code>]</dt><dd><p>Print all S3 secrets to which the current environment has access, or if
@@ -200,6 +200,12 @@ install ah extensions from the specified repo at the specified revision to
 </ul>
 
 
+<h2 id="HOOKS">HOOKS</h2>
+
+<p>If a <var>$APPDIR</var><code>/.ah/hooks/</code><var>command</var><code>/after.sh</code> file exists it will be sourced
+after the <var>command</var> has completed. It will have access to all of the variables
+in the command's scope.</p>
+
 <h2 id="FILES">FILES</h2>
 
 <p>The following configuration files are used to configure the <code>ah</code> environment.
@@ -212,16 +218,6 @@ command. Settings in this file only apply to this application. This file
 <strong>must</strong> be committed to the git repository for the application.</p></dd>
 <dt><var>$APPDIR</var><code>/.ah/env</code></dt><dd><p>This file contains the name of the current default environment, as set by
 the <code>env</code> command.</p></dd>
-<dt><var>$APPDIR</var><code>/.ah/launch/inline_policies.sh</code></dt><dd><p>A script that runs as a child of <code>ah launch</code> (so has access to all of the
-environment variables used to configure the env) which may print a sequence
-of JSON objects (separated by optional whitespace) to <var>stdout</var>. These JSON
-objects are statements that will be added to the env role's inline policy.
-Each statment must be of the form {"Effect": "Allow", "Action": [...]} (see
-<code>launch</code> above).</p>
-
-<p><strong>Note</strong>: If this file does not exist it is assumed that the role's inline
-policy will be managed externally and <strong>ah</strong> will not update it when running
-<code>ah launch</code> on an env that already exists.</p></dd>
 </dl>
 
 
