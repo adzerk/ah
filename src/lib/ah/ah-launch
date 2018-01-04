@@ -274,6 +274,7 @@ if ! $AH_LAUNCH_UPDATE || $lc_changed; then
       --user-data "$(cat $AH_SHR/user-data.sh |envsubst '$AH_APP:$AH_ENV:$AH_BUCKET:$AH_MASTER_REGION')" \
       --instance-type $AH_ENV_TYPE \
       --iam-instance-profile $(ah_instance_profile_arn ah/$AH_ENV) \
+      ${AH_ENV_SPOT_PRICE:+--spot-price $AH_ENV_SPOT_PRICE} \
       ${AH_ENV_CL_VPC:+--classic-link-vpc-id $AH_ENV_CL_VPC} \
       ${AH_ENV_CL_VPC_SGS:+--classic-link-vpc-security-groups $AH_ENV_CL_VPC_SGS} \
       ${AH_ENV_VPC:+$AH_ENV_PUBLIC_IP} \
