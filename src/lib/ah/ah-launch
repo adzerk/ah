@@ -70,7 +70,6 @@ if [[ $AH_ENV_ASG ]]; then
   export AH_LAUNCH_UPDATE=true
   AH_ASG_SAVED=$(save_asg_config)
   AH_LC_SAVED=$(save_lc_config)
-  AH_ROLE_SAVED=$(save_role_config)
 else
   export AH_LAUNCH_UPDATE=false
   ah_check "app policy exists" ah_policy_exists || ah_die "aborted."
