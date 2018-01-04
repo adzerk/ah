@@ -7,7 +7,7 @@ save_asg_config() {
 }
 
 save_lc_config() {
-  printenv |grep -E '^AH_ENV_(PUBLIC_IP|CL_VPC_SGS|PROFILE|IMAGE|TYPE|KEY|SGS|USER_DATA)=' |sort
+  printenv |grep -E '^AH_ENV_(PUBLIC_IP|CL_VPC_SGS|PROFILE|IMAGE|TYPE|SPOT_PRICE|KEY|SGS|USER_DATA)=' |sort
 }
 
 ah_info "Loading AWS configuration info..."
@@ -142,6 +142,8 @@ while true; do
   while ah_select -p "Instance type? " AH_ENV_TYPE "$avail_instance_types"; do
     [[ "$AH_ENV_TYPE" ]] && break
   done
+
+  ah_text_input -p "Spot price (USD -- leave empty to use on-demand instances)? " AH_ENV_SPOT_PRICE
 
   vars=$(printenv |grep -E '^AH_(ENV_|BILLING_)' |sort)
 
