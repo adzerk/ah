@@ -86,7 +86,7 @@ apptgt=s3://$AH_BUCKET/data/$AH_APP/${AH_SHA}.tar.gz
 
 pushd $appsrc
   info "Fetching repo..."
-  AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp $apptgz - |tar xzvf -
+  AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp $apptgz - |tar xzf -
 
   info "Updating environment variables..."
   update_vars
