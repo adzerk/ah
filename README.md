@@ -13,6 +13,19 @@ Deployment automation tool.
 1. `ronn` (`gem install ronn`)
 1. `rs` (`sudo apt install rs`)
 
+
+## For MacOS
+
+```bash
+brew install coreutils
+brew install aws-cli
+gem install ronn
+# rs already installed
+brew install gettext
+brew link --force gettext # overwrites mac builtins
+brew install json-table
+```
+
 To install in `/usr/local` do:
 
 ```bash
