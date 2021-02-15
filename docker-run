@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+# The purpose of this script is to run the container such that you can extract
+# the zip file.
+# 1. ./docker-run
+# 2. cp /workdir/ah_build.zip /workdir/local
+# 3. quit the container
+# 4. You now have `ah_build.zip` in your local directory.
+# 5. Install or use as you see fit.
+
+docker run --rm \
+           --interactive \
+           --volume $PWD:/workdir/local \
+           --tty \
+           ah-image:latest

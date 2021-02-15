@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+# The purpose of this script is to run build a container that can successfully
+# build `ah`. After running this, run `./docker-run` to make use of the effort.
+docker build --tag ah-image:latest .
