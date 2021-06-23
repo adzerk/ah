@@ -5,7 +5,7 @@
 [[ -z "$AH_BUCKET" || -z "$AH_APP" || -z "$AH_ENV" ]] \
   && echo "missing environment configuration" 1>&2 && exit 1
 
-skipcodedeploy=$AH_SKIP_CODE_DEPLOY
+skipcodedeploy=$AH_SKIP_CODE_DEPLOY  # if true then do not deploy git sha
 appdir=/opt/$AH_APP
 appgit=s3://$AH_BUCKET/repo/$AH_APP
 appenv=s3://$AH_BUCKET/data/$AH_APP/${AH_ENV}.env
@@ -81,14 +81,14 @@ else
     export AH_SHA="$DEPLOY_SHA"
 fi
 
-if [ -z "${skipcodedeploy+x}" ]; then
+if [ ! "$skipcodedeploy" ]; then
   appsrc=$(mktemp -d -p /opt ${AH_APP}.${AH_SHA}.XXX)
   apptgz=s3://$AH_BUCKET/repo/$AH_APP/${AH_SHA}.tar.gz
   apptgt=s3://$AH_BUCKET/data/$AH_APP/${AH_SHA}.tar.gz
 
   pushd $appsrc
-      info "Fetching repo..."
-      AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp $apptgz - |tar xzf -
+    info "Fetching repo..."
+    AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp $apptgz - |tar xzf -
     info "Updating environment variables..."
     update_vars
     eval "$(cat .ah/ah.env |sed 's@^@export @')"
@@ -99,9 +99,14 @@ if [ -z "${skipcodedeploy+x}" ]; then
   info "Linking $appsrc -> $appdir..."
   ln -sfn $appsrc $appdir
 else
-    info "Updating environment variables..."
+
+  info "Updating environment variables..."
+
+  pushd $appdir
     update_vars
-    eval "$(cat $appdir/.ah/ah.env |sed 's@^@export @')"
+  popd > /dev/null
+
+  eval "$(cat $appdir/.ah/ah.env |sed 's@^@export @')"
 fi
 
 
