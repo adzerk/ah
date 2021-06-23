@@ -43,7 +43,7 @@ export AH_APP=$AH_APP
 export AH_ENV=$AH_ENV
 EOT
 
-AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp s3://$AH_BUCKET/bin/ah-client6 /usr/local/bin/ah-client
+AWS_DEFAULT_REGION=$AH_MASTER_REGION aws s3 cp s3://$AH_BUCKET/bin/ah-client7 /usr/local/bin/ah-client
 chmod 755 /usr/local/bin/ah-client
 
 # provision and deploy application on first boot
