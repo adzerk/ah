@@ -41,7 +41,7 @@ avail_subnets=$(aws ec2 describe-subnets \
   |awk -F '	' '{print $1 "\t" $2 "\t" $3 " " $4}' \
   |sort -k3)
 
-avail_images=$(aws ec2 describe-images --owners $(ah_account_id) \
+avail_images=$(aws ec2 describe-images --owners $(ah_account_id) --filters Name=name,Values=${AH_BILLING_PROJECT}\* \
   |jt Images [ ImageId % ] [ Name % ] \
   |sort -k2)
 
