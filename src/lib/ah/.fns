@@ -162,7 +162,7 @@ ah_git_hash() {
 
 # Returns the AWS account ID associated this user.
 ah_account_id() {
-  aws iam get-user |jt User Arn % |awk -F: '{print $5}'
+  aws sts get-caller-identity | jt Account %
 }
 
 # Returns the first alias for the AWS account associated with this user.
